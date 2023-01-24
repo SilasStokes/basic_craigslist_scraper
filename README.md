@@ -1,6 +1,6 @@
 # basic_craigslist_scraper
 
-Goal of this repo is to flesh out what it takes to scrape craigslist before I fix the issues in the ( craigslist python package )[https://github.com/juliomalegria/python-craigslist]. 
+Goal of this repo is to flesh out what it takes to scrape craigslist before I port the [craigslist python package](https://github.com/juliomalegria/python-craigslist) to use selenium instead of requests due to craigslist blocking requests that don't come from a browser with javascript enabled, [documented here](https://github.com/juliomalegria/python-craigslist/issues/116)
 
 To install the python packages use `pip install -r requirements.txt`.
 
