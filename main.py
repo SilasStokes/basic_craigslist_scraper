@@ -1,4 +1,8 @@
+from email.message import EmailMessage
+import random
 import os
+import smtplib
+import ssl
 import time
 import datetime
 import selenium.webdriver as webdriver
@@ -17,6 +21,9 @@ from sqlalchemy.orm import declarative_base
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from sqlalchemy import select
+
+# email imports
+import json
 
 
 Base = declarative_base()
@@ -111,6 +118,21 @@ def main():
     Welcome to the craigslist free alert searcher. Every 3 minutes this script will query cl for free items and then print the new items to the terminal.
     cheers!
     ''')
+    passcode_file_path = f'passcode.key'
+    dst_email = ''
+    src_email = ''
+    password = ''
+    with open(passcode_file_path) as json_file:
+        data = json.load(json_file)
+        dst_email = data.get('destination_email', '')
+        src_email = data.get('source_email', '')
+        password = data.get('password', '')
+    
+    
+    if not dst_email or not password:
+        print(f'Email and password not set in config...')
+        exit()
+
     while True:
         # get results
         new_listings = scrape()
@@ -119,16 +141,35 @@ def main():
         if not new_listings:
             print(f'No new listings...')
         else:
+            msg = EmailMessage()
+            msg['Subject'] = f'cl item alert'
+            msg['From'] = src_email
+            msg['To'] = dst_email
+            # msg.set_content(f'new item!!!')
+            content = ''
+
             print(f'New listings: ')
             for i, listing in enumerate( new_listings):
                 print(f'\t{i}. {listing}')
+                title = listing['title']
+                link = listing['link']
+                content = content + f'{i}. {title} : {link}\n'
+                
+            msg.set_content(content)
+
+            ssl_context = ssl.create_default_context()
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=ssl_context) as server:
+                server.login(dst_email, password)
+                server.send_message(msg)
 
 
-        # sleep 3 minutes
-        print('sleeping for 3 minutes...')
-        for i in range(0, 3*60):
-            print(f'{i}... ')
-            time.sleep(1)
+        # sleep between 3 and 6 minutes
+        seconds = random.randint(3*60,6*60) 
+        print(f'sleeping for {seconds//60} minutes and {seconds%60} seconds...')
+        time.sleep(seconds)
+        # for i in range(0, seconds):
+        #     print(f'{i}... ')
+        #     time.sleep(1)
 
 if __name__ == "__main__":
     main()
