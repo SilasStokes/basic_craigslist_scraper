@@ -4,6 +4,14 @@ Goal of this repo is to flesh out what it takes to scrape craigslist before I po
 
 To install the python packages use `pip install -r requirements.txt`.
 
+# Todo List:
+- change the scrape function to account for multiple urls in the craigslist url array in the config.json
+- write the code to integrate with twilio to get notifications via sms. 
+- allow human readable csv files to be selected instead of database (maybe command line argument?)
+- Get more data from the scraping (price, relevant pictures, the description)
+- see if this works with selenium headless mode (I haven't tried yet...)
+
+
 goals:
 1. write a script that can pull from craigslist 24/7 without bot detection. 
 2. send me alerts via email or text when a new ad I want to see becomes available.
@@ -24,3 +32,8 @@ suprisingly simple with gmail.
     "password": "passcode-google-gave-you"
 }
 ```
+
+# to set up phone number: 
+'''
+TODO!
+'''

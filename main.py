@@ -1,19 +1,8 @@
-from email.message import EmailMessage
-import random
-import os
-import smtplib
-import ssl
-import time
-import datetime
+# Selenium imports
 import selenium.webdriver as webdriver
 from selenium.webdriver.firefox.service import Service
-from selenium.webdriver.support.ui import Select
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.common.exceptions import ElementNotInteractableException
-# from bs4 import BeautifulSoup
-# import pandas as pd
 
 # DB imports
 from sqlalchemy import Column, Float, String, DateTime
@@ -24,10 +13,46 @@ from sqlalchemy import select
 
 # email imports
 import json
+from email.message import EmailMessage
+import smtplib
+import ssl
+
+# misc imports
+import random
+import os
+import time
+import datetime
+import sys
+import argparse
 
 
+# setting up program variables:
+config = {}
+parser = argparse.ArgumentParser()
+parser.add_argument('--config-path', default='config.json', help='pass the file path to your keyfile')
+
+cl_args = parser.parse_args()
+
+try:
+    with open(cl_args.config) as json_file:
+        config = json.load(json_file)
+    assert 'craigslist_urls' in config
+    assert 'send_email_alerts' in config
+    assert 'send_sms_alerts' in config
+
+    if bool(config['send_email_alerts']):
+        assert 'dst_email' in config
+        assert 'src_email' in config
+        assert 'email_key' in config
+    if bool(config['send_sms_alerts']):
+        assert 'src_phone_number' in config
+        assert 'dst_phone_numbers' in config
+except:
+    print(f'ERROR: check config file - something is broken, exiting...')
+    exit()
+
+# setting up database
 Base = declarative_base()
-
 class DB_Listing(Base):
     '''
     Google python metaclass to read about the declarative_base pattern
@@ -44,8 +69,6 @@ class DB_Listing(Base):
     def __repr__(self):
         return f'{self.title=} {self.price=} {self.link=}'
 
-
-
 # :memory: allows the db to be held in ram -- for testing purposes.
 engine = create_engine("sqlite+pysqlite:///:memory:", echo = False, future = True)
 Base.metadata.create_all(engine)
@@ -61,13 +84,6 @@ firefox_option.set_preference('general.useragent.override', user_agent)
 browser = webdriver.Firefox(service=firefox_service, options=firefox_option)
 browser.implicitly_wait(15) # my computer slow asf
 
-url = 'https://seattle.craigslist.org'
-free_items_url = f'{url}/search/zip#search=1~gallery~0~0'
-all_forsale_url = f'{url}/search/sss#search=1~gallery~0~0'
-browser.get(free_items_url)
-# browser.get(all_forsale_url)
-
-time.sleep(1.5)
 
 def translate_html_elements():
     listings = []
@@ -113,63 +129,58 @@ def scrape():
         session.commit()
     return new_listings
 
-def main():
+def welcome_message():
     print(f'''
-    Welcome to the craigslist free alert searcher. Every 3 minutes this script will query cl for free items and then print the new items to the terminal.
+    Welcome to the craigslist free alert searcher. 
+    Every 3 minutes this script will query cl for free items and then print the new items to the terminal.
     cheers!
     ''')
-    passcode_file_path = f'passcode.key'
-    dst_email = ''
-    src_email = ''
-    password = ''
-    with open(passcode_file_path) as json_file:
-        data = json.load(json_file)
-        dst_email = data.get('destination_email', '')
-        src_email = data.get('source_email', '')
-        password = data.get('password', '')
-    
-    
-    if not dst_email or not password:
-        print(f'Email and password not set in config...')
-        exit()
 
+def send_email_alert(alert):
+    # TODO: Set up email alert
+    msg = EmailMessage()
+    msg['Subject'] = f'cl item alert'
+    msg['From'] = config['src_email']
+    msg['To'] = config['dst_email']
+    msg.set_content(alert)
+
+    ssl_context = ssl.create_default_context()
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=ssl_context) as server:
+        server.login(config['dst_email'], config['email_key'])
+        server.send_message(msg)
+
+def send_sms_alert(alert):
+    # TODO: Set up text alert with twilio
+    ...
+
+def send_alert(alert:str):
+    if bool(config['send_email_alerts']):
+        send_email_alert(alert)
+    if bool(config['send_sms_alerts']):
+        send_sms_alert(alert)
+
+
+def main():
+    # begin scrape loop:
     while True:
         # get results
         new_listings = scrape()
 
-        # set alert
-        if not new_listings:
-            print(f'No new listings...')
-        else:
-            msg = EmailMessage()
-            msg['Subject'] = f'cl item alert'
-            msg['From'] = src_email
-            msg['To'] = dst_email
-            # msg.set_content(f'new item!!!')
-            content = ''
-
-            print(f'New listings: ')
+        # if there's listings, send them whichever way is declared in config.json
+        if new_listings:
+            alert_content = ""
             for i, listing in enumerate( new_listings):
-                print(f'\t{i}. {listing}')
                 title = listing['title']
                 link = listing['link']
-                content = content + f'{i}. {title} : {link}\n'
-                
-            msg.set_content(content)
-
-            ssl_context = ssl.create_default_context()
-            with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=ssl_context) as server:
-                server.login(dst_email, password)
-                server.send_message(msg)
+                alert_content = alert_content + f'{i}. {title} : {link}\n'
+            print(alert_content)
+            send_alert(alert_content)
 
 
         # sleep between 3 and 6 minutes
         seconds = random.randint(3*60,6*60) 
         print(f'sleeping for {seconds//60} minutes and {seconds%60} seconds...')
         time.sleep(seconds)
-        # for i in range(0, seconds):
-        #     print(f'{i}... ')
-        #     time.sleep(1)
 
 if __name__ == "__main__":
     main()
