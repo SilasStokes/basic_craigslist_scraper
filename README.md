@@ -15,7 +15,7 @@ To install the python packages use `pip install -r requirements.txt`.
 - Use Python package Fake User Agent to randomly generate a new user agent every request. 
 - Add code to get the time the cl ad was posted to report in email/sms.
 - change the scrape function to account for multiple urls in the craigslist url array in the config.json
-- listings are saved as a dictionary, our database listing object is basically just a dictionary wrapper (DB_Listing), there's gotta be a pythonic way to allow a new DB_Listing = listing, might be one of the dunder methods. We could also just change the __init__ inside the DB_listing class to accept a dictionary.
+- listings are saved as a dictionary, our database listing object is basically just a dictionary wrapper (DB_Listing), there's gotta be a pythonic way to allow a new DB_Listing = listing, might be one of the dunder methods. We could also just change the \_\_init\_\_ inside the DB_listing class to accept a dictionary.
 
 
 # goals:

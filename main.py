@@ -22,9 +22,7 @@ import random
 import os
 import time
 import datetime
-import sys
 import argparse
-
 
 # setting up program variables:
 config = {}
@@ -68,6 +66,11 @@ class DB_Listing(Base):
 
     def __repr__(self):
         return f'{self.title=} {self.price=} {self.link=}'
+    
+    # if we wanted to init DB_Listing with a dictionary we could do it here.
+    # Research may be done to see if we have call the base class's __init__ method as well.
+    # def __init__(self):
+    #     ...
 
 # :memory: allows the db to be held in ram -- for testing purposes.
 engine = create_engine("sqlite+pysqlite:///:memory:", echo = False, future = True)
@@ -109,6 +112,7 @@ def scrape():
     # get all list items
     listings = translate_html_elements()
 
+    # Opening a database session, putting listings inside.
     with Session(engine) as session:
         for listing in listings:
             # print(f'Seeing if link already in db {link=}')
