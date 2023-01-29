@@ -10,6 +10,7 @@ To install the python packages use `pip install -r requirements.txt`.
 - Get more data from the scraping (price, relevant pictures, the description)
 - see if this works with selenium headless mode (I haven't tried yet...)
 - Research using xpath for element selection.
+- Swap the alert_content variable for html content to have nicely formatted emails.
 
 # Gabe todo:
 - Use Python package Fake User Agent to randomly generate a new user agent every request. 

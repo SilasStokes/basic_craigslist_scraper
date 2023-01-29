@@ -32,22 +32,23 @@ parser.add_argument('--config-path', default='config.json', help='pass the file 
 cl_args = parser.parse_args()
 
 try:
-    with open(cl_args.config) as json_file:
+    with open(cl_args.config_path) as json_file:
         config = json.load(json_file)
     assert 'craigslist_urls' in config
     assert 'send_email_alerts' in config
     assert 'send_sms_alerts' in config
 
     if bool(config['send_email_alerts']):
-        assert 'dst_email' in config
+        assert 'dst_emails' in config
         assert 'src_email' in config
         assert 'email_key' in config
     if bool(config['send_sms_alerts']):
         assert 'src_phone_number' in config
         assert 'dst_phone_numbers' in config
-except:
-    print(f'ERROR: check config file - something is broken, exiting...')
+except Exception as exc:
+    print(f'ERROR: check config file - something is broken.{Exception=} {exc=}. Exiting...')
     exit()
+
 
 # setting up database
 Base = declarative_base()
@@ -155,6 +156,7 @@ def send_email_alert(alert):
 
 def send_sms_alert(alert):
     # TODO: Set up text alert with twilio
+    print(f'SMS_Alerts not set up yet.')
     ...
 
 def send_alert(alert:str):
@@ -172,6 +174,8 @@ def main():
 
         # if there's listings, send them whichever way is declared in config.json
         if new_listings:
+
+            # build the alert content string
             alert_content = ""
             for i, listing in enumerate( new_listings):
                 title = listing['title']

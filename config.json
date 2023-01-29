@@ -6,14 +6,14 @@
 
     "send_email_alerts":"True",
     "src_email": "", 
-    "dst_email": [
+    "dst_emails": [
         ""
     ], 
     "email_key": "",
 
     "send_sms_alerts":"False",
     "src_phone_number" : "enter phone number in the format of +12223334444",
-    "dst_phone_number" : ["countrycode the plus one has to be in the phone number"],
+    "dst_phone_numbers" : ["countrycode the plus one has to be in the phone number"],
     "db_path": "cl.db"
 
 }
