@@ -106,8 +106,9 @@ def translate_html_elements():
     return listings
 
 
-def scrape():
-    browser.refresh()
+def scrape(url):
+    # browser.refresh()
+    browser.get(url)
     new_listings = []
 
     # get all list items
@@ -146,12 +147,12 @@ def send_email_alert(alert):
     msg = EmailMessage()
     msg['Subject'] = f'cl item alert'
     msg['From'] = config['src_email']
-    msg['To'] = config['dst_email']
+    msg['To'] = config['dst_emails']
     msg.set_content(alert)
 
     ssl_context = ssl.create_default_context()
     with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=ssl_context) as server:
-        server.login(config['dst_email'], config['email_key'])
+        server.login(config['src_email'], config['email_key'])
         server.send_message(msg)
 
 def send_sms_alert(alert):
@@ -170,7 +171,8 @@ def main():
     # begin scrape loop:
     while True:
         # get results
-        new_listings = scrape()
+        for url in config['craigslist_urls']:
+            new_listings = scrape(url)
 
         # if there's listings, send them whichever way is declared in config.json
         if new_listings:
