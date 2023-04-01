@@ -33,7 +33,7 @@ from twilio.rest import Client
 # setting up program variables:
 config = {}
 parser = argparse.ArgumentParser()
-parser.add_argument('--config-path', default='myconfig.json',
+parser.add_argument('--config-path', default='./configs/myconfig.json',
                     help='pass the file path to your keyfile')
 
 cl_args = parser.parse_args()

@@ -4,3 +4,4 @@ myconfig.json
 .vscode
 drivers
 geckodriver.log
+configs
