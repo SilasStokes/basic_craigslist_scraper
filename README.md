@@ -5,18 +5,19 @@ Goal of this repo is to flesh out what it takes to scrape craigslist before I po
 To install the python packages use `pip install -r requirements.txt`.
 
 # Todo List:
-- write the code to integrate with twilio to get notifications via sms. 
-- allow human readable csv files to be selected instead of database (maybe command line argument?)
-- Get more data from the scraping (price, relevant pictures, the description)
-- see if this works with selenium headless mode (I haven't tried yet...)
-- Research using xpath for element selection.
-- Swap the alert_content variable for html content to have nicely formatted emails.
+[ ] parse config file using something like dataclass or pydantic so inputs are autovalidated
+[ ] dockerize the script so it's easily deployable for others
+[ ] save the time that the post was posted + include that in the text. 
+[ ] clean up the database interpolation. 
+
+
+# Done
+[x] write the code to integrate with twilio to get notifications via sms. 
+[x] allow human readable csv files to be selected instead of database (maybe command line argument?)
+[x] change the scrape function to account for multiple urls in the craigslist url array in the config.json
 
 # Gabe todo:
 - Use Python package Fake User Agent to randomly generate a new user agent every request. 
-- Add code to get the time the cl ad was posted to report in email/sms.
-- change the scrape function to account for multiple urls in the craigslist url array in the config.json
-- listings are saved as a dictionary, our database listing object is basically just a dictionary wrapper (DB_Listing), there's gotta be a pythonic way to allow a new DB_Listing = listing, might be one of the dunder methods. We could also just change the \_\_init\_\_ inside the DB_listing class to accept a dictionary.
 
 
 # goals:
