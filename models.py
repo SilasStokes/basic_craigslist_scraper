@@ -8,3 +8,4 @@ class Craigslist_Result_Card():
     link: str
     title: str
     id: str
+    screenshot_path: str
