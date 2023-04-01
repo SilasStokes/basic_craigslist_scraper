@@ -3,3 +3,4 @@ venv
 myconfig.json
 .vscode
 drivers
+geckodriver.log
