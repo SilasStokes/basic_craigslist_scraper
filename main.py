@@ -129,8 +129,8 @@ def scrape(url):
 
     # swap this to a database after benchmarking
     existing_records = []
-    if os.path.isfile('database.json'):
-        with open('database.json', 'r', ) as db:
+    if os.path.isfile(f'{config["dst_phone_number"]}_database.json'):
+        with open(f'{config["dst_phone_number"]}_database.json', 'r', ) as db:
             js = json.load(db)
             for record in js:
                 existing_records.append(Craigslist_Result_Card(**record))
@@ -140,7 +140,7 @@ def scrape(url):
             new_listings.append(listing)
             existing_records.append(listing)
 
-    with open('database.json', 'w') as db:
+    with open(f'{config["dst_phone_number"]}_database.json', 'w') as db:
         json.dump(Craigslist_Result_Card.schema().dump(
             existing_records, many=True), db)
 
