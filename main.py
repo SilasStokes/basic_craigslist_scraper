@@ -5,7 +5,6 @@ from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.common.by import By
 
 # DB imports
-from sqlalchemy.orm import Session
 
 # email imports
 import json
@@ -21,7 +20,7 @@ import datetime
 import argparse
 
 # custom imports:
-from models import Craigslist_Result_Card, get_engine, Config, Base, get_db
+from models import Craigslist_Result_Card, get_engine, Config, Base, get_db, Session
 
 # twilio imports
 from twilio.rest import Client
@@ -59,7 +58,7 @@ except Exception as exc:
 # Base.metadata.create_all(engine)
 name = cl_args.config_path.split(sep='/')[-1].removesuffix('.json')
 db = get_db(f'{name}')
-engine = get_engine(user=config['db_user'], password=config['db_password'])
+engine = get_engine(user=config['db_user'], password=config['db_password'], echo=False)
 db.metadata.create_all(engine)
 
 
@@ -73,7 +72,7 @@ firefox_driver_path = f'{os.getcwd()}/drivers/geckodriver'
 # firefox_options.binary_location = '/usr/bin/firefox'
 # firefox_service = Service(firefox_driver_path)
 firefox_option = Options()
-# firefox_option.add_argument('-headless')
+firefox_option.add_argument('-headless')
 firefox_option.set_preference('general.useragent.override', user_agent)
 browser = webdriver.Firefox(options=firefox_option)
 # browser = webdriver.Firefox(service=firefox_service, options=firefox_option)
@@ -81,8 +80,7 @@ browser.implicitly_wait(1)  # my computer slow asf
 browser.get('https://google.com')
 
 
-def translate_html_elements():
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+def translate_html_elements(timestamp: str):
     listings = []
     free_elements = browser.find_elements(
         by=By.CLASS_NAME, value='cl-search-result')
@@ -94,32 +92,35 @@ def translate_html_elements():
         meta_string = el.find_element(by=By.CLASS_NAME, value='meta').text
         posted_time, location = meta_string.split(sep='·')
 
-        result = Craigslist_Result_Card(
-            link=link, title=title, cl_id=cl_id, screenshot_path='', time_posted=posted_time, location=location, time_scraped=timestamp)
+        result = db(link=link, title=title, cl_id=cl_id, screenshot_path='',
+                    time_posted=posted_time, location=location, time_scraped=timestamp)
+        # result = Craigslist_Result_Card(
+        #     link=link, title=title, cl_id=cl_id, screenshot_path='', time_posted=posted_time, location=location, time_scraped=timestamp)
         listings.append(result)
     return listings
 
 
-def scrape(url):
+def scrape(url: str, timestamp: str):
     browser.refresh()
     browser.get(url)
-    new_listings = []
+    num_listings = 0
 
     # get all list items
-    listings = translate_html_elements()
-
     with Session(engine) as session:
+        listings = translate_html_elements(timestamp)
+        num_listings = len(listings)
         for listing in listings:
             if not session.query(db).filter(db.cl_id == listing.cl_id).first():
-                new_listings.append(listing)
                 # remove this monstrosity and reaplce with the ** operator,
-                entry = db(cl_id=listing.cl_id, link=listing.link, title=listing.title, screenshot_path=listing.screenshot_path,
-                                         time_posted=listing.time_posted, location=listing.location, time_scraped=listing.time_scraped)
-                session.add(entry)
+                # entry = db(cl_id=listing.cl_id, link=listing.link, title=listing.title, screenshot_path=listing.screenshot_path,
+                #                          time_posted=listing.time_posted, location=listing.location, time_scraped=listing.time_scraped)
+                session.add(listing)
+                # session.add(entry)
                 # session.add(db_listing_entry(**dict(listing)))
+
         session.commit()
 
-    return new_listings
+    return num_listings
 
 
 def welcome_message():
@@ -143,7 +144,7 @@ def send_email_alert(alert: Craigslist_Result_Card):
         server.send_message(msg)
 
 
-def send_sms_alert(alert: Craigslist_Result_Card):
+def send_sms_alert(alert):
     client = Client(config['twilio_account_sid'], config['twilio_auth_token'])
     message_body = f'title: {alert.title}\nscraped: {alert.time_scraped}\nposted: {alert.time_posted}\nlocation:{alert.location}\n{alert.link}'
     print(message_body)
@@ -156,8 +157,8 @@ def send_sms_alert(alert: Craigslist_Result_Card):
 
 
 def send_alert(alert: Craigslist_Result_Card):
-    if bool(config['send_email_alerts']):
-        send_email_alert(alert)
+    # if bool(config['send_email_alerts']):
+    #     send_email_alert(alert)
     if bool(config['send_sms_alerts']):
         send_sms_alert(alert)
     pass
@@ -176,24 +177,18 @@ def main():
     intial_loop = True
     while True:
         # get results
-        for url in config['craigslist_urls']:
-            new_listings = scrape(url)
-
-            # if there's listings, send them whichever way is declared in config.json
-            if new_listings:
-                # build the alert content string
-                alert_content = ""
-                for i, listing in enumerate(new_listings):
-                    title = listing.title
-                    link = listing.link
-                    alert_content = alert_content + f'{i}. {title} : {link}\n'
-
-                    if not intial_loop:
-                        send_alert(listing)
-                print(alert_content)
+        for i, url in enumerate(config['craigslist_urls']):
+            timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            # returns the number of new listings
+            scrape(url, timestamp)
+            with Session(engine) as session:
+                listings = session.query(db).filter(db.time_scraped == timestamp)
+                for i,  listing in enumerate(listings):
+                    print(f'{i}. {listing.title} : {listing.link}')
+                    send_alert(listing)
 
             # sleep before we get the next url result
-            if len(config['craigslist_urls']) > 1:
+            if i != len(config['craigslist_urls']) - 1:
                 sleep_random(5, 15)
 
         intial_loop = False

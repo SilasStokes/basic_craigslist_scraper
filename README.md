@@ -5,22 +5,22 @@ Goal of this repo is to flesh out what it takes to scrape craigslist before I po
 To install the python packages use `pip install -r requirements.txt`.
 
 # Todo List:
-- [ ] Use SQLAlchemy 2.0 feature where you can you db model as dataclass. [like this](https://docs.sqlalchemy.org/en/20/orm/dataclasses.html)
+- [ ] Use Python package Fake User Agent to randomly generate a new user agent every request. 
+- [ ] Use logging instead of prints
 - [ ] parse config file using something like dataclass or pydantic so inputs are autovalidated
+- [ ] correct the database datatypes, right now they are all strings...
+- [ ] make the scraped_at property a foreign key
 - [ ] dockerize the script so it's easily deployable for others
 - [ ] create a parent scripts that can schedule and manage all the individual profiles in ./configs. 
 
 
 # Done
+- [x] Use SQLAlchemy 2.0 feature where you can you db model as dataclass. [like this](https://docs.sqlalchemy.org/en/20/orm/dataclasses.html)
 - [x] clean up the database interpolation. 
 - [x] write the code to integrate with twilio to get notifications via sms. 
 - [x] allow human readable csv files to be selected instead of database (maybe command line argument?)
 - [x] change the scrape function to account for multiple urls in the craigslist url array in the config.json
 - [x] save the time that the post was posted + include that in the text. 
-
-# Gabe todo:
-- Use Python package Fake User Agent to randomly generate a new user agent every request. 
-
 
 # goals:
 1. write a script that can pull from craigslist 24/7 without bot detection. 

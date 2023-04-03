@@ -3,6 +3,7 @@ from dataclasses_json import dataclass_json
 from typing import Optional
 
 # SQLAlchemy imports
+from sqlalchemy.orm import MappedAsDataclass
 from sqlalchemy import Column, Float, String, DateTime, Integer
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy import create_engine
@@ -15,7 +16,7 @@ from sqlalchemy import select
 
 @dataclass_json
 @dataclass
-class Craigslist_Result_Card():
+class Craigslist_Result_Card:
     link: str
     title: str
     cl_id: str
@@ -48,13 +49,13 @@ def get_engine(user: str = 'postgres', password: str = 'password', host: str = '
     engine = create_engine(SQLALCHEMY_DATABASE_URL, echo=echo)
     return engine
 
-class Base(DeclarativeBase):
+class Base(MappedAsDataclass, DeclarativeBase):
     pass
 
 def get_db(table_name: str):
     class db_listing_entry(Base):
         __tablename__ = f'cl_table_{table_name}'
-        id: Mapped[int] = mapped_column(Integer, primary_key=True)
+        id: Mapped[int] = mapped_column(Integer,init=False,  primary_key=True)
         link: Mapped[str] = mapped_column(String)
         title: Mapped[str] = mapped_column(String)
         cl_id: Mapped[str] = mapped_column(String)
