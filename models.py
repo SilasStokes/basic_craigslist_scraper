@@ -43,14 +43,13 @@ class Config():
 
 
 # format is postgresql://username:password@host:port/database
-def init_engine(user: str = 'postgres', password: str = 'password', host: str = 'localhost', port: str = '5432', database: str = 'craigslist', echo: bool = False):
+def get_engine(user: str = 'postgres', password: str = 'password', host: str = 'localhost', port: str = '5432', database: str = 'craigslist', echo: bool = False):
     SQLALCHEMY_DATABASE_URL = f'postgresql://{user}:{password}@{host}:{port}/{database}'
     engine = create_engine(SQLALCHEMY_DATABASE_URL, echo=echo)
     return engine
 
 class Base(DeclarativeBase):
     pass
-
 
 def get_db(table_name: str):
     class db_listing_entry(Base):

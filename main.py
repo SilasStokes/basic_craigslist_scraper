@@ -21,7 +21,7 @@ import datetime
 import argparse
 
 # custom imports:
-from models import Craigslist_Result_Card, init_engine, Config, Base, get_db
+from models import Craigslist_Result_Card, get_engine, Config, Base, get_db
 
 # twilio imports
 from twilio.rest import Client
@@ -57,11 +57,10 @@ except Exception as exc:
 
 # # setting up database
 # Base.metadata.create_all(engine)
-name = cl_args.config_path.split(sep='/')[-1].split(sep='_')[0]
+name = cl_args.config_path.split(sep='/')[-1].removesuffix('.json')
 db = get_db(f'{name}')
-engine = init_engine(user=config['db_user'], password=config['db_password'])
+engine = get_engine(user=config['db_user'], password=config['db_password'])
 db.metadata.create_all(engine)
-# get_db(f'{name}').metadata.create_all(engine)
 
 
 # browser setup
@@ -146,7 +145,7 @@ def send_email_alert(alert: Craigslist_Result_Card):
 
 def send_sms_alert(alert: Craigslist_Result_Card):
     client = Client(config['twilio_account_sid'], config['twilio_auth_token'])
-    message_body = f'title: {alert.title}\ntimestamp: {alert.time_scraped}\nposted: {alert.time_posted}\nlocation:{alert.location}\n{alert.link}'
+    message_body = f'title: {alert.title}\nscraped: {alert.time_scraped}\nposted: {alert.time_posted}\nlocation:{alert.location}\n{alert.link}'
     print(message_body)
 
     client.messages.create(
