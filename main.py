@@ -5,11 +5,7 @@ from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.common.by import By
 
 # DB imports
-# from sqlalchemy import Column, Float, String, DateTime
-# from sqlalchemy.orm import declarative_base
-# from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
-# from sqlalchemy import select
 
 # email imports
 import json
@@ -25,7 +21,7 @@ import datetime
 import argparse
 
 # custom imports:
-from models import Craigslist_Result_Card, engine, db_listing_entry, Config, Base
+from models import Craigslist_Result_Card, init_engine, Config, Base, get_db
 
 # twilio imports
 from twilio.rest import Client
@@ -44,6 +40,8 @@ try:
     assert 'craigslist_urls' in config
     assert 'send_email_alerts' in config
     assert 'send_sms_alerts' in config
+    assert 'db_user' in config
+    assert 'db_password' in config
 
     if bool(config['send_email_alerts']):
         assert 'dst_emails' in config
@@ -58,7 +56,12 @@ except Exception as exc:
     exit()
 
 # # setting up database
-Base.metadata.create_all(engine)
+# Base.metadata.create_all(engine)
+name = cl_args.config_path.split(sep='/')[-1].split(sep='_')[0]
+db = get_db(f'{name}')
+engine = init_engine(user=config['db_user'], password=config['db_password'])
+db.metadata.create_all(engine)
+# get_db(f'{name}').metadata.create_all(engine)
 
 
 # browser setup
@@ -108,10 +111,10 @@ def scrape(url):
 
     with Session(engine) as session:
         for listing in listings:
-            if not session.query(db_listing_entry).filter(db_listing_entry.cl_id == listing.cl_id).first():
+            if not session.query(db).filter(db.cl_id == listing.cl_id).first():
                 new_listings.append(listing)
                 # remove this monstrosity and reaplce with the ** operator,
-                entry = db_listing_entry(cl_id=listing.cl_id, link=listing.link, title=listing.title, screenshot_path=listing.screenshot_path,
+                entry = db(cl_id=listing.cl_id, link=listing.link, title=listing.title, screenshot_path=listing.screenshot_path,
                                          time_posted=listing.time_posted, location=listing.location, time_scraped=listing.time_scraped)
                 session.add(entry)
                 # session.add(db_listing_entry(**dict(listing)))
