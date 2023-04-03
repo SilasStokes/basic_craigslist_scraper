@@ -8,7 +8,7 @@ from selenium.webdriver.common.by import By
 # from sqlalchemy import Column, Float, String, DateTime
 # from sqlalchemy.orm import declarative_base
 # from sqlalchemy import create_engine
-# from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session
 # from sqlalchemy import select
 
 # email imports
@@ -25,7 +25,7 @@ import datetime
 import argparse
 
 # custom imports:
-from models import Craigslist_Result_Card
+from models import Craigslist_Result_Card, engine, db_listing_entry, Config, Base
 
 # twilio imports
 from twilio.rest import Client
@@ -57,33 +57,8 @@ except Exception as exc:
         f'ERROR: check config file - something is broken.{Exception=} {exc=}. Exiting...')
     exit()
 
-
 # # setting up database
-# Base = declarative_base()
-# class DB_Listing(Base):
-#     '''
-#     Google python metaclass to read about the declarative_base pattern
-#     __init__(self) is in Base class Listing inherts from.
-#     '''
-#     __tablename__ = 'listings'
-#     id = Column(String, primary_key=True)
-#     title = Column(String)
-#     image_path = Column(String)
-#     created = Column(DateTime)
-#     link = Column(String)
-#     price = Column(Float)
-
-#     def __repr__(self):
-#         return f'{self.title=} {self.price=} {self.link=}'
-
-#     # if we wanted to init DB_Listing with a dictionary we could do it here.
-#     # Research may be done to see if we have call the base class's __init__ method as well.
-#     # def __init__(self):
-#     #     ...
-
-# # :memory: allows the db to be held in ram -- for testing purposes.
-# engine = create_engine("sqlite+pysqlite:///:memory:", echo = False, future = True)
-# Base.metadata.create_all(engine)
+Base.metadata.create_all(engine)
 
 
 # browser setup
@@ -96,7 +71,7 @@ firefox_driver_path = f'{os.getcwd()}/drivers/geckodriver'
 # firefox_options.binary_location = '/usr/bin/firefox'
 # firefox_service = Service(firefox_driver_path)
 firefox_option = Options()
-firefox_option.add_argument('-headless')
+# firefox_option.add_argument('-headless')
 firefox_option.set_preference('general.useragent.override', user_agent)
 browser = webdriver.Firefox(options=firefox_option)
 # browser = webdriver.Firefox(service=firefox_service, options=firefox_option)
@@ -105,6 +80,7 @@ browser.get('https://google.com')
 
 
 def translate_html_elements():
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     listings = []
     free_elements = browser.find_elements(
         by=By.CLASS_NAME, value='cl-search-result')
@@ -112,9 +88,12 @@ def translate_html_elements():
         a_tag = el.find_element(by=By.CLASS_NAME, value='titlestring')
         title = a_tag.text
         link = a_tag.get_attribute('href')
-        id = link.split(sep='/')[-1].removesuffix('.html')
+        cl_id = link.split(sep='/')[-1].removesuffix('.html')
+        meta_string = el.find_element(by=By.CLASS_NAME, value='meta').text
+        posted_time, location = meta_string.split(sep='·')
+
         result = Craigslist_Result_Card(
-            link=link, title=title, id=id, screenshot_path='')
+            link=link, title=title, cl_id=cl_id, screenshot_path='', time_posted=posted_time, location=location, time_scraped=timestamp)
         listings.append(result)
     return listings
 
@@ -127,22 +106,16 @@ def scrape(url):
     # get all list items
     listings = translate_html_elements()
 
-    # swap this to a database after benchmarking
-    existing_records = []
-    if os.path.isfile(f'{config["dst_phone_number"]}_database.json'):
-        with open(f'{config["dst_phone_number"]}_database.json', 'r', ) as db:
-            js = json.load(db)
-            for record in js:
-                existing_records.append(Craigslist_Result_Card(**record))
-
-    for listing in listings:
-        if listing not in existing_records:
-            new_listings.append(listing)
-            existing_records.append(listing)
-
-    with open(f'{config["dst_phone_number"]}_database.json', 'w') as db:
-        json.dump(Craigslist_Result_Card.schema().dump(
-            existing_records, many=True), db)
+    with Session(engine) as session:
+        for listing in listings:
+            if not session.query(db_listing_entry).filter(db_listing_entry.cl_id == listing.cl_id).first():
+                new_listings.append(listing)
+                # remove this monstrosity and reaplce with the ** operator,
+                entry = db_listing_entry(cl_id=listing.cl_id, link=listing.link, title=listing.title, screenshot_path=listing.screenshot_path,
+                                         time_posted=listing.time_posted, location=listing.location, time_scraped=listing.time_scraped)
+                session.add(entry)
+                # session.add(db_listing_entry(**dict(listing)))
+        session.commit()
 
     return new_listings
 
@@ -169,21 +142,23 @@ def send_email_alert(alert: Craigslist_Result_Card):
 
 
 def send_sms_alert(alert: Craigslist_Result_Card):
-    # print('sending sms..')
     client = Client(config['twilio_account_sid'], config['twilio_auth_token'])
+    message_body = f'title: {alert.title}\ntimestamp: {alert.time_scraped}\nposted: {alert.time_posted}\nlocation:{alert.location}\n{alert.link}'
+    print(message_body)
 
-    message = client.messages.create(
-        body=alert.link,
+    client.messages.create(
+        body=message_body,
         from_=config['src_phone_number'],
         to=config['dst_phone_numbers'][0]
     )
 
 
 def send_alert(alert: Craigslist_Result_Card):
-    #    if bool(config['send_email_alerts']):
-    #        send_email_alert(alert)
+    if bool(config['send_email_alerts']):
+        send_email_alert(alert)
     if bool(config['send_sms_alerts']):
         send_sms_alert(alert)
+    pass
 
 
 def sleep_random(lval, rval):
@@ -214,8 +189,10 @@ def main():
                     if not intial_loop:
                         send_alert(listing)
                 print(alert_content)
+
             # sleep before we get the next url result
-            sleep_random(5, 15)
+            if len(config['craigslist_urls']) > 1:
+                sleep_random(5, 15)
 
         intial_loop = False
         # sleep between 3 and 6 minutes
