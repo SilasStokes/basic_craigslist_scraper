@@ -201,7 +201,7 @@ def main():
                     send_alert(listing)
 
             # sleep before we get the next url result
-            if i != len(config.craigslist_urls) - 1:
+            if i != len(config.urls) - 1:
                 sleep_random(5, 15)
 
         intial_loop = False
