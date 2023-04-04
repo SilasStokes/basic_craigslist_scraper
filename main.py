@@ -148,11 +148,11 @@ def send_sms_alert(alert):
     client = Client(config['twilio_account_sid'], config['twilio_auth_token'])
     message_body = f'title: {alert.title}\nscraped: {alert.time_scraped}\nposted: {alert.time_posted}\nlocation:{alert.location}\n{alert.link}'
     print(message_body)
-
     client.messages.create(
         body=message_body,
+        # body=message_body,
         from_=config['src_phone_number'],
-        to=config['dst_phone_numbers'][0]
+        to=config['dst_phone_numbers']
     )
 
 
@@ -161,7 +161,6 @@ def send_alert(alert: Craigslist_Result_Card):
     #     send_email_alert(alert)
     if bool(config['send_sms_alerts']):
         send_sms_alert(alert)
-    pass
 
 
 def sleep_random(lval, rval):
@@ -177,10 +176,13 @@ def main():
     intial_loop = True
     while True:
         # get results
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         for i, url in enumerate(config['craigslist_urls']):
-            timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             # returns the number of new listings
             scrape(url, timestamp)
+            if intial_loop:
+                continue
+
             with Session(engine) as session:
                 listings = session.query(db).filter(db.time_scraped == timestamp)
                 for i,  listing in enumerate(listings):
@@ -193,7 +195,7 @@ def main():
 
         intial_loop = False
         # sleep between 3 and 6 minutes
-        sleep_random(180, 360)
+        sleep_random(30, 60)
 
 
 if __name__ == "__main__":
