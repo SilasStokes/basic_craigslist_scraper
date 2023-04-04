@@ -5,3 +5,5 @@ myconfig.json
 drivers
 geckodriver.log
 configs
+notes.md
+__pycache__
