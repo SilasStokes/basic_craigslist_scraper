@@ -7,7 +7,6 @@ To install the python packages use `pip install -r requirements.txt`.
 # Todo List:
 - [ ] Use Python package Fake User Agent to randomly generate a new user agent every request. 
 - [ ] Use logging instead of prints
-- [ ] parse config file using something like dataclass or pydantic so inputs are autovalidated
 - [ ] correct the database datatypes, right now they are all strings...
 - [ ] make the scraped_at property a foreign key
 - [ ] dockerize the script so it's easily deployable for others
@@ -15,6 +14,7 @@ To install the python packages use `pip install -r requirements.txt`.
 
 
 # Done
+- [x] parse config file using something like dataclass or pydantic so inputs are autovalidated
 - [x] Use SQLAlchemy 2.0 feature where you can you db model as dataclass. [like this](https://docs.sqlalchemy.org/en/20/orm/dataclasses.html)
 - [x] clean up the database interpolation. 
 - [x] write the code to integrate with twilio to get notifications via sms. 
