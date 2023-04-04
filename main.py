@@ -26,29 +26,17 @@ from models import get_engine, Config, Base, get_db, Session
 from twilio.rest import Client
 
 # setting up program variables:
-config = {}
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--config', default='./configs/myconfig.json',
                     help='pass the file path to your keyfile')
 
 cl_args = parser.parse_args()
 
-try:
-    with open(cl_args.config_path) as json_file:
-        config = json.load(json_file)
-    assert 'craigslist_urls' in config
-    assert 'send_email_alerts' in config
-    assert 'send_sms_alerts' in config
-    assert 'db_user' in config
-    assert 'db_password' in config
 
-    if bool(config['send_email_alerts']):
-        assert 'dst_emails' in config
-        assert 'src_email' in config
-        assert 'email_key' in config
-    if bool(config['send_sms_alerts']):
-        assert 'src_phone_number' in config
-        assert 'dst_phone_numbers' in config
+try:
+    with open(cl_args.config) as json_file:
+        config = Config(**json.load(json_file))
 except Exception as exc:
     print(
         f'ERROR: check config file - something is broken.{Exception=} {exc=}. Exiting...')
@@ -56,10 +44,10 @@ except Exception as exc:
 
 # # setting up database
 # Base.metadata.create_all(engine)
-name = cl_args.config_path.split(sep='/')[-1].removesuffix('.json')
+name = cl_args.config.split(sep='/')[-1].removesuffix('.json')
 db = get_db(f'{name}')
-engine = get_engine(user=config['db_user'],
-                    password=config['db_password'], echo=False)
+engine = get_engine(user=config.db_user,
+                    password=config.db_password, echo=False)
 db.metadata.create_all(engine)
 error_count = 0
 
@@ -146,42 +134,42 @@ def welcome_message():
 def send_email_alert(alert ):
     msg = EmailMessage()
     msg['Subject'] = f'cl item alert'
-    msg['From'] = config['src_email']
-    msg['To'] = config['dst_emails']
+    msg['From'] = config.src_email
+    msg['To'] = config.dst_emails
     msg.set_content(alert.to_json())
 
     ssl_context = ssl.create_default_context()
     with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=ssl_context) as server:
-        server.login(config['src_email'], config['email_key'])
+        server.login(config.src_email, config.email_key)
         server.send_message(msg)
 
 
 def send_error_alert(error: str):
-    client = Client(config['twilio_account_sid'], config['twilio_auth_token'])
+    client = Client(config.twilio_account_sid, config.twilio_auth_token)
     client.messages.create(
         body=error,
         # body=message_body,
-        from_=config['src_phone_number'],
-        to=config['dst_phone_numbers']
+        from_=config.src_phone_number,
+        to=config.dst_phone_numbers
     )
 
 
 def send_sms_alert(alert):
-    client = Client(config['twilio_account_sid'], config['twilio_auth_token'])
+    client = Client(config.twilio_account_sid, config.twilio_auth_token)
     message_body = f'title: {alert.title}\nscraped: {alert.time_scraped}\nposted: {alert.time_posted}\nlocation:{alert.location}\n{alert.link}'
     print(message_body)
     client.messages.create(
         body=message_body,
         # body=message_body,
-        from_=config['src_phone_number'],
-        to=config['dst_phone_numbers']
+        from_=config.src_phone_number,
+        to=config.dst_phone_numbers
     )
 
 
 def send_alert(alert):
     # if bool(config['send_email_alerts']):
     #     send_email_alert(alert)
-    if bool(config['send_sms_alerts']):
+    if bool(config.send_sms_alerts):
         send_sms_alert(alert)
 
 
@@ -199,7 +187,7 @@ def main():
     while True:
         # get results
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        for i, url in enumerate(config['craigslist_urls']):
+        for i, url in enumerate(config.urls):
             # returns the number of new listings
             scrape(url, timestamp)
             if intial_loop:
@@ -213,7 +201,7 @@ def main():
                     send_alert(listing)
 
             # sleep before we get the next url result
-            if i != len(config['craigslist_urls']) - 1:
+            if i != len(config.craigslist_urls) - 1:
                 sleep_random(5, 15)
 
         intial_loop = False
