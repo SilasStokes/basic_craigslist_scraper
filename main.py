@@ -20,7 +20,7 @@ import datetime
 import argparse
 
 # custom imports:
-from models import Craigslist_Result_Card, get_engine, Config, Base, get_db, Session
+from models import get_engine, Config, Base, get_db, Session
 
 # twilio imports
 from twilio.rest import Client
@@ -28,7 +28,7 @@ from twilio.rest import Client
 # setting up program variables:
 config = {}
 parser = argparse.ArgumentParser()
-parser.add_argument('--config-path', default='./configs/myconfig.json',
+parser.add_argument('--config', default='./configs/myconfig.json',
                     help='pass the file path to your keyfile')
 
 cl_args = parser.parse_args()
@@ -58,29 +58,29 @@ except Exception as exc:
 # Base.metadata.create_all(engine)
 name = cl_args.config_path.split(sep='/')[-1].removesuffix('.json')
 db = get_db(f'{name}')
-engine = get_engine(user=config['db_user'], password=config['db_password'], echo=False)
+engine = get_engine(user=config['db_user'],
+                    password=config['db_password'], echo=False)
 db.metadata.create_all(engine)
+error_count = 0
+
+def browser_setup():
+    user_agent = 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/109.0'
+    # firefox_driver_path = f'{os.getcwd()}/drivers/geckodriver'
+    # firefox_options = webdriver.FirefoxOptions()
+    # firefox_options.binary_location = '/usr/bin/firefox'
+    # firefox_service = Service(firefox_driver_path)
+    firefox_option = Options()
+    firefox_option.add_argument('-headless')
+    firefox_option.set_preference('general.useragent.override', user_agent)
+    browser = webdriver.Firefox(options=firefox_option)
+    # browser = webdriver.Firefox(service=firefox_service, options=firefox_option)
+    # browser.implicitly_wait(1)  # my computer slow asf
+    return browser
 
 
-# browser setup
-# swap to fake user agent?
-user_agent = 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/109.0'
-# change this to use the pathlib
-# dir_path = os.path.dirname(os.path.realpath(__file__))
-firefox_driver_path = f'{os.getcwd()}/drivers/geckodriver'
-# firefox_options = webdriver.FirefoxOptions()
-# firefox_options.binary_location = '/usr/bin/firefox'
-# firefox_service = Service(firefox_driver_path)
-firefox_option = Options()
-firefox_option.add_argument('-headless')
-firefox_option.set_preference('general.useragent.override', user_agent)
-browser = webdriver.Firefox(options=firefox_option)
-# browser = webdriver.Firefox(service=firefox_service, options=firefox_option)
-browser.implicitly_wait(1)  # my computer slow asf
-browser.get('https://google.com')
 
 
-def translate_html_elements(timestamp: str):
+def translate_html_elements(timestamp: str, browser):
     listings = []
     free_elements = browser.find_elements(
         by=By.CLASS_NAME, value='cl-search-result')
@@ -94,20 +94,32 @@ def translate_html_elements(timestamp: str):
 
         result = db(link=link, title=title, cl_id=cl_id, screenshot_path='',
                     time_posted=posted_time, location=location, time_scraped=timestamp)
-        # result = Craigslist_Result_Card(
-        #     link=link, title=title, cl_id=cl_id, screenshot_path='', time_posted=posted_time, location=location, time_scraped=timestamp)
         listings.append(result)
     return listings
 
 
 def scrape(url: str, timestamp: str):
-    browser.refresh()
+    global error_count
+    browser = browser_setup()
     browser.get(url)
     num_listings = 0
 
     # get all list items
     with Session(engine) as session:
-        listings = translate_html_elements(timestamp)
+        try:
+            listings = translate_html_elements(timestamp, browser=browser)
+        except Exception as exc:
+            browser.quit()
+            error_count += 1
+            send_error_alert(
+                f'ERROR: {exc=}\nScript will try {3-error_count} more times and then shutdown.')
+            if error_count == 3:
+                send_error_alert(
+                    f'ERROR: {exc=} - Ask silas to restart the script.')
+                exit()
+            return
+        browser.quit()
+
         num_listings = len(listings)
         for listing in listings:
             if not session.query(db).filter(db.cl_id == listing.cl_id).first():
@@ -131,7 +143,7 @@ def welcome_message():
     ''')
 
 
-def send_email_alert(alert: Craigslist_Result_Card):
+def send_email_alert(alert ):
     msg = EmailMessage()
     msg['Subject'] = f'cl item alert'
     msg['From'] = config['src_email']
@@ -142,6 +154,16 @@ def send_email_alert(alert: Craigslist_Result_Card):
     with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=ssl_context) as server:
         server.login(config['src_email'], config['email_key'])
         server.send_message(msg)
+
+
+def send_error_alert(error: str):
+    client = Client(config['twilio_account_sid'], config['twilio_auth_token'])
+    client.messages.create(
+        body=error,
+        # body=message_body,
+        from_=config['src_phone_number'],
+        to=config['dst_phone_numbers']
+    )
 
 
 def send_sms_alert(alert):
@@ -156,7 +178,7 @@ def send_sms_alert(alert):
     )
 
 
-def send_alert(alert: Craigslist_Result_Card):
+def send_alert(alert):
     # if bool(config['send_email_alerts']):
     #     send_email_alert(alert)
     if bool(config['send_sms_alerts']):
@@ -184,7 +206,8 @@ def main():
                 continue
 
             with Session(engine) as session:
-                listings = session.query(db).filter(db.time_scraped == timestamp)
+                listings = session.query(db).filter(
+                    db.time_scraped == timestamp)
                 for i,  listing in enumerate(listings):
                     print(f'{i}. {listing.title} : {listing.link}')
                     send_alert(listing)

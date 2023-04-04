@@ -14,20 +14,8 @@ from sqlalchemy.orm import mapped_column
 from sqlalchemy import select
 
 
-@dataclass_json
 @dataclass
-class Craigslist_Result_Card:
-    link: str
-    title: str
-    cl_id: str
-    screenshot_path: str
-    time_posted: str
-    location: str
-    time_scraped: str
-
-
-@dataclass
-class Config():
+class Config:
     urls: list[str]
     send_email_alerts: bool
     src_email: str
