@@ -3,6 +3,11 @@ import selenium.webdriver as webdriver
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
+# import selenium set_page_load_timeout(30)
 
 # DB imports
 
@@ -51,28 +56,36 @@ engine = get_engine(user=config.db_user,
 db.metadata.create_all(engine)
 error_count = 0
 
+
 def browser_setup():
     user_agent = 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/109.0'
-    # firefox_driver_path = f'{os.getcwd()}/drivers/geckodriver'
-    # firefox_options = webdriver.FirefoxOptions()
-    # firefox_options.binary_location = '/usr/bin/firefox'
-    # firefox_service = Service(firefox_driver_path)
     firefox_option = Options()
     firefox_option.add_argument('-headless')
     firefox_option.set_preference('general.useragent.override', user_agent)
     browser = webdriver.Firefox(options=firefox_option)
-    # browser = webdriver.Firefox(service=firefox_service, options=firefox_option)
-    # browser.implicitly_wait(1)  # my computer slow asf
+    browser.implicitly_wait(1)  # my computer slow asf
     return browser
-
-
 
 
 def translate_html_elements(timestamp: str, browser):
     listings = []
+    delay = 5  # seconds
+    pageLoadClock = datetime.datetime.now()
+    current_time = pageLoadClock.strftime("%H:%M:%S")
+    print("Time before starting page load =", current_time)
+    try:
+        WebDriverWait(browser, delay).until(
+            EC.presence_of_element_located((By.CLASS_NAME, 'cl-search-result')))
+        pass
+    except TimeoutException:
+        pass
+    pageLoadedClock = datetime.datetime.now()
+    current_time_after_page_loaded = pageLoadedClock.strftime("%H:%M:%S")
+    print("Time after page load and before clicking the Try it button=", current_time_after_page_loaded)
     free_elements = browser.find_elements(
         by=By.CLASS_NAME, value='cl-search-result')
     for el in free_elements:
+
         a_tag = el.find_element(by=By.CLASS_NAME, value='titlestring')
         title = a_tag.text
         link = a_tag.get_attribute('href')
@@ -99,6 +112,8 @@ def scrape(url: str, timestamp: str):
         except Exception as exc:
             browser.quit()
             error_count += 1
+            print(
+                f'ERROR: {exc=}\nScript will try {3-error_count} more times and then shutdown.')
             send_error_alert(
                 f'ERROR: {exc=}\nScript will try {3-error_count} more times and then shutdown.')
             if error_count == 3:
@@ -114,10 +129,14 @@ def scrape(url: str, timestamp: str):
                 # remove this monstrosity and reaplce with the ** operator,
                 # entry = db(cl_id=listing.cl_id, link=listing.link, title=listing.title, screenshot_path=listing.screenshot_path,
                 #                          time_posted=listing.time_posted, location=listing.location, time_scraped=listing.time_scraped)
+                print(f'\tADDED {listing}')
                 session.add(listing)
                 # session.add(entry)
                 # session.add(db_listing_entry(**dict(listing)))
+            # else:
+                # print(f'\tCOLLISON: {listing.title}, {listing.cl_id=}')
 
+        print('commiting to db')
         session.commit()
 
     return num_listings
@@ -131,7 +150,7 @@ def welcome_message():
     ''')
 
 
-def send_email_alert(alert ):
+def send_email_alert(alert):
     msg = EmailMessage()
     msg['Subject'] = f'cl item alert'
     msg['From'] = config.src_email
@@ -206,7 +225,7 @@ def main():
 
         intial_loop = False
         # sleep between 3 and 6 minutes
-        sleep_random(30, 60)
+        sleep_random(45, 90)
 
 
 if __name__ == "__main__":
