@@ -5,12 +5,14 @@ Goal of this repo is to flesh out what it takes to scrape craigslist before I po
 To install the python packages use `pip install -r requirements.txt`.
 
 # Todo List:
+- [ ] Add a feature where all the texts will get added to a single text. 
+- [ ] add the math to calculate the scraped time and the posted at (which cl presents as "4 mins ago") so timing can be correctly stored in the db. 
+- [ ] create a parent scripts that can schedule and manage all the individual profiles in ./configs. (make an active directory in configs and put all the configs that need to be managed there)
 - [ ] Use Python package Fake User Agent to randomly generate a new user agent every request. 
 - [ ] Use logging instead of prints
 - [ ] correct the database datatypes, right now they are all strings...
 - [ ] make the scraped_at property a foreign key
 - [ ] dockerize the script so it's easily deployable for others
-- [ ] create a parent scripts that can schedule and manage all the individual profiles in ./configs. 
 
 
 # Done
@@ -22,11 +24,9 @@ To install the python packages use `pip install -r requirements.txt`.
 - [x] change the scrape function to account for multiple urls in the craigslist url array in the config.json
 - [x] save the time that the post was posted + include that in the text. 
 
-# goals:
-1. write a script that can pull from craigslist 24/7 without bot detection. 
-2. send me alerts via email or text when a new ad I want to see becomes available.
-3. create the program such that it's usable by others with little to no code set up. 
-4. have the script alert me if it stops running
+# Setup:
+TODO!
+notes: I am running on a 64 bit raspberry pi running python 3.9. 
 
 # To set up email:
 suprisingly simple with gmail.
