@@ -8,6 +8,8 @@ To install the python packages use `pip install -r requirements.txt`.
 - [ ] Add a feature where all the texts will get added to a single text. 
 - [ ] add the math to calculate the scraped time and the posted at (which cl presents as "4 mins ago") so timing can be correctly stored in the db. 
 - [ ] create a parent scripts that can schedule and manage all the individual profiles in ./configs. (make an active directory in configs and put all the configs that need to be managed there)
+- [ ] Allow the script to be managed via the user texting the twilio number e.g user can start and stop, add a new link, give filter keywords.
+- [ ] Add filter section to config, no more notifications about free dirt. 
 - [ ] Use Python package Fake User Agent to randomly generate a new user agent every request. 
 - [ ] Use logging instead of prints
 - [ ] correct the database datatypes, right now they are all strings...
@@ -61,6 +63,8 @@ suprisingly simple with gmail.
     "password": "passcode-google-gave-you"
 }
 ```
+
+
 
 # to set up phone number: 
 '''
