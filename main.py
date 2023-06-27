@@ -137,37 +137,37 @@ def scrape(url: str, timestamp: str):
 def send_email_alert(alert):
     msg = EmailMessage()
     msg['Subject'] = f'cl item alert'
-    msg['From'] = config.email.src
-    msg['To'] = config.emails.dst
+    msg['From'] = config.src_email
+    msg['To'] = config.dst_emails
     message_body = f'title: {alert.title}\nscraped: {alert.time_scraped}\nposted: {alert.time_posted}\nlocation:{alert.location}\n{alert.link}'
     msg.set_content(message_body)
 
     ssl_context = ssl.create_default_context()
     with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=ssl_context) as server:
-        server.login(config.email.src, config.email.email_key)
+        server.login(config.src_email, config.email_key)
         server.send_message(msg)
 
 
 def send_error_alert(error: str):
     printError(error)
-    client = Client(config.sms.twilio_account_sid,
-                    config.sms.twilio_auth_token)
+    client = Client(config.twilio_account_sid,
+                    config.twilio_auth_token)
     client.messages.create(
         body=error,
-        from_=config.sms.src,
-        to=config.sms.dst
+        from_=config.src_phone_number,
+        to=config.dst_phone_numbers
     )
 
 
 def send_sms_alert(alert):
-    client = Client(config.sms.twilio_account_sid,
-                    config.sms.twilio_auth_token)
+    client = Client(config.twilio_account_sid,
+                    config.twilio_auth_token)
     message_body = f'title: {alert.title}\nscraped: {alert.time_scraped}\nposted: {alert.time_posted}\nlocation:{alert.location}\n{alert.link}'
     printInfo('Sending: ', message_body)
     client.messages.create(
         body=message_body,
-        from_=config.sms.src,
-        to=config.sms.dst
+        from_=config.src_phone_number,
+        to=config.dst_phone_numbers
     )
 
 
@@ -175,7 +175,7 @@ def send_alert(alert):
     # email not working
     # if bool(config.email.send_alerts):
     #     send_email_alert(alert)
-    if bool(config.sms.send_alerts):
+    if bool(config.send_sms_alerts):
         send_sms_alert(alert)
 
 

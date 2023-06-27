@@ -8,27 +8,17 @@ from sqlalchemy.orm import Session, Mapped, mapped_column, DeclarativeBase, Mapp
 
 
 @dataclass
-class email:
-    send_alerts: bool
-    src: str
-    dst: list[str]
-    email_key: str
-
-
-@dataclass
-class sms:
-    send_alerts: bool
-    src: str
-    dst: list[str]
-    twilio_account_sid: str
-    twilio_auth_token: str
-
-
-@dataclass
 class Config:
     urls: list[str]
-    email: email
-    sms: sms
+    send_email_alerts: bool
+    src_email: str
+    dst_emails: str
+    email_key: str
+    send_sms_alerts: bool
+    src_phone_number: str
+    dst_phone_numbers: str
+    twilio_account_sid: str
+    twilio_auth_token: str
     db_user: str
     db_password: str
 
