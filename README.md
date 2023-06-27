@@ -25,8 +25,27 @@ To install the python packages use `pip install -r requirements.txt`.
 - [x] save the time that the post was posted + include that in the text. 
 
 # Setup:
-TODO!
-notes: I am running on a 64 bit raspberry pi running python 3.9. 
+
+## Requirements
+
+* A 64 bit raspberry pi running a 64 bit OS (ubuntu or similar)
+* Python 3.9 - standalone or via [pyenv](https://github.com/pyenv/pyenv)
+* firefox - `apt install firefox` *geckodriver included!*
+* postgresql
+
+once installed run `pip install -r requirements.txt`
+
+### Postgrest setup
+
+**NOTE:** If you already have postgres setup skip to step 4
+
+1. Install with `apt install postgresql`
+2. login to postgres `sudo -u postgres psql`
+3. set the password `\password postgres`
+4. create the database `CREAT DATABASE craigslist;`
+
+Finally, update your `config.json` with your username and password (both are set to `postgres` here)
+
 
 # To set up email:
 suprisingly simple with gmail.
