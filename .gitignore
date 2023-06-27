@@ -1,6 +1,6 @@
 .venv
 venv
-myconfig.json
+config.json
 .vscode
 drivers
 geckodriver.log

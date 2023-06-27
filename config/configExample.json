@@ -1,0 +1,20 @@
+{
+    "urls": [
+        "https://seattle.craigslist.org/search/seattle-wa/zip?lat=47.5997&lon=-122.3128&search_distance=6.7#search=1~gallery~0~0"
+    ],
+    "send_email_alerts": "False",
+    "src_email": "where-you-want-emails-sent-from@gmail.com",
+    "dst_emails": [
+        "your-email@gmail.com"
+    ],
+    "email_key": "",
+    "send_sms_alerts": "True",
+    "src_phone_number": "+12345678901",
+    "dst_phone_numbers": [
+        "+12345678901"
+    ],
+    "twilio_account_sid": "1234",
+    "twilio_auth_token": "1234",
+    "db_user": "postgres",
+    "db_password": "postgres"
+}
