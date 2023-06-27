@@ -1,15 +1,10 @@
 # Selenium imports
-import selenium.webdriver as webdriver
-from selenium.webdriver.firefox.service import Service
+from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
-# import selenium set_page_load_timeout(30)
-
-# DB imports
 
 # email imports
 import json
@@ -26,6 +21,7 @@ import argparse
 
 # custom imports:
 from models import get_engine, Config, Base, get_db, Session
+from prettyPrint import printError, printInfo, printSuccess, welcome_message
 
 # twilio imports
 from twilio.rest import Client
@@ -33,7 +29,7 @@ from twilio.rest import Client
 # setting up program variables:
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--config', default='./configs/myconfig.json',
+parser.add_argument('--config', default='./config/config.json',
                     help='pass the file path to your keyfile')
 
 cl_args = parser.parse_args()
@@ -43,8 +39,8 @@ try:
     with open(cl_args.config) as json_file:
         config = Config(**json.load(json_file))
 except Exception as exc:
-    print(
-        f'ERROR: check config file - something is broken.{Exception=} {exc=}. Exiting...')
+    printError(
+        f'check config file - something is broken.{Exception=} {exc=}. Exiting...')
     exit()
 
 # # setting up database
@@ -58,10 +54,8 @@ error_count = 0
 
 
 def browser_setup():
-    user_agent = 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/109.0'
     firefox_option = Options()
-    firefox_option.add_argument('-headless')
-    firefox_option.set_preference('general.useragent.override', user_agent)
+    firefox_option.add_argument('--headless')
     browser = webdriver.Firefox(options=firefox_option)
     browser.implicitly_wait(1)  # my computer slow asf
     return browser
@@ -70,23 +64,24 @@ def browser_setup():
 def translate_html_elements(timestamp: str, browser):
     listings = []
     delay = 5  # seconds
-    pageLoadClock = datetime.datetime.now()
-    current_time = pageLoadClock.strftime("%H:%M:%S")
-    print("Time before starting page load =", current_time)
+    beforePageLoad = datetime.datetime.now()
+    printInfo(beforePageLoad.strftime("%H:%M:%S"), " - Starting page load ")
     try:
         WebDriverWait(browser, delay).until(
             EC.presence_of_element_located((By.CLASS_NAME, 'cl-search-result')))
         pass
     except TimeoutException:
         pass
-    pageLoadedClock = datetime.datetime.now()
-    current_time_after_page_loaded = pageLoadedClock.strftime("%H:%M:%S")
-    print("Time after page load and before clicking the Try it button=", current_time_after_page_loaded)
+
+    afterPageLoad = datetime.datetime.now()
+    delta = afterPageLoad - beforePageLoad
+    printInfo(afterPageLoad.strftime("%H:%M:%S"),
+              " - Page loaded, took ", delta.seconds, 's')
+
     free_elements = browser.find_elements(
         by=By.CLASS_NAME, value='cl-search-result')
     for el in free_elements:
-
-        a_tag = el.find_element(by=By.CLASS_NAME, value='titlestring')
+        a_tag = el.find_element(By.CLASS_NAME, 'posting-title')
         title = a_tag.text
         link = a_tag.get_attribute('href')
         cl_id = link.split(sep='/')[-1].removesuffix('.html')
@@ -112,8 +107,6 @@ def scrape(url: str, timestamp: str):
         except Exception as exc:
             browser.quit()
             error_count += 1
-            print(
-                f'ERROR: {exc=}\nScript will try {3-error_count} more times and then shutdown.')
             send_error_alert(
                 f'ERROR: {exc=}\nScript will try {3-error_count} more times and then shutdown.')
             if error_count == 3:
@@ -124,84 +117,80 @@ def scrape(url: str, timestamp: str):
         browser.quit()
 
         num_listings = len(listings)
+        items = 0
         for listing in listings:
             if not session.query(db).filter(db.cl_id == listing.cl_id).first():
-                # remove this monstrosity and reaplce with the ** operator,
-                # entry = db(cl_id=listing.cl_id, link=listing.link, title=listing.title, screenshot_path=listing.screenshot_path,
-                #                          time_posted=listing.time_posted, location=listing.location, time_scraped=listing.time_scraped)
-                print(f'\tADDED {listing}')
+                printInfo('DB - adding new listing: ', listing, '\n')
+                items += 1
                 session.add(listing)
-                # session.add(entry)
-                # session.add(db_listing_entry(**dict(listing)))
-            # else:
-                # print(f'\tCOLLISON: {listing.title}, {listing.cl_id=}')
 
-        print('commiting to db')
-        session.commit()
+        if (items > 0):
+            printInfo(f'Commiting {items} items to db...')
+            session.commit()
+            printSuccess('Commit successful')
+        else:
+            printInfo('Nothing to commit')
 
     return num_listings
-
-
-def welcome_message():
-    print(f'''
-    Welcome to the craigslist free alert searcher. 
-    Every 3 minutes this script will query cl for free items and then print the new items to the terminal.
-    cheers!
-    ''')
 
 
 def send_email_alert(alert):
     msg = EmailMessage()
     msg['Subject'] = f'cl item alert'
-    msg['From'] = config.src_email
-    msg['To'] = config.dst_emails
-    msg.set_content(alert.to_json())
+    msg['From'] = config.email.src
+    msg['To'] = config.emails.dst
+    message_body = f'title: {alert.title}\nscraped: {alert.time_scraped}\nposted: {alert.time_posted}\nlocation:{alert.location}\n{alert.link}'
+    msg.set_content(message_body)
 
     ssl_context = ssl.create_default_context()
     with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=ssl_context) as server:
-        server.login(config.src_email, config.email_key)
+        server.login(config.email.src, config.email.email_key)
         server.send_message(msg)
 
 
 def send_error_alert(error: str):
-    client = Client(config.twilio_account_sid, config.twilio_auth_token)
+    printError(error)
+    client = Client(config.sms.twilio_account_sid,
+                    config.sms.twilio_auth_token)
     client.messages.create(
         body=error,
-        # body=message_body,
-        from_=config.src_phone_number,
-        to=config.dst_phone_numbers
+        from_=config.sms.src,
+        to=config.sms.dst
     )
 
 
 def send_sms_alert(alert):
-    client = Client(config.twilio_account_sid, config.twilio_auth_token)
+    client = Client(config.sms.twilio_account_sid,
+                    config.sms.twilio_auth_token)
     message_body = f'title: {alert.title}\nscraped: {alert.time_scraped}\nposted: {alert.time_posted}\nlocation:{alert.location}\n{alert.link}'
-    print(message_body)
+    printInfo('Sending: ', message_body)
     client.messages.create(
         body=message_body,
-        # body=message_body,
-        from_=config.src_phone_number,
-        to=config.dst_phone_numbers
+        from_=config.sms.src,
+        to=config.sms.dst
     )
 
 
 def send_alert(alert):
-    # if bool(config['send_email_alerts']):
+    # email not working
+    # if bool(config.email.send_alerts):
     #     send_email_alert(alert)
-    if bool(config.send_sms_alerts):
+    if bool(config.sms.send_alerts):
         send_sms_alert(alert)
 
 
 def sleep_random(lval, rval):
     seconds = random.randint(lval, rval)
-    timestamp = datetime.datetime.now()  # .strftime('%Y-%m-%d %H:%M:%S')
-    next_iteration = timestamp + datetime.timedelta(seconds=seconds)
-    print(f"{timestamp.strftime('%Y-%m-%d %H:%M:%S')}: sleeping for {seconds//60} minutes and {seconds%60} seconds..., next request at {next_iteration.strftime('%Y-%m-%d %H:%M:%S')}")
+    next_iteration = datetime.datetime.now() + datetime.timedelta(seconds=seconds)
+    printInfo(
+        f"{datetime.datetime.now().strftime('%H:%M:%S')} - Sleeping for {seconds//60} minutes and {seconds%60} seconds...")
+    printInfo(
+        f"{datetime.datetime.now().strftime('%H:%M:%S')} - Next request at {next_iteration.strftime('%H:%M:%S')}")
     time.sleep(seconds)
 
 
 def main():
-    # begin scrape loop:
+    welcome_message()
     intial_loop = True
     while True:
         # get results
@@ -216,7 +205,7 @@ def main():
                 listings = session.query(db).filter(
                     db.time_scraped == timestamp)
                 for i,  listing in enumerate(listings):
-                    print(f'{i}. {listing.title} : {listing.link}')
+                    printInfo(f'{i}. {listing.title} : {listing.link}')
                     send_alert(listing)
 
             # sleep before we get the next url result
@@ -224,7 +213,7 @@ def main():
                 sleep_random(5, 15)
 
         intial_loop = False
-        # sleep between 3 and 6 minutes
+        # sleep between 45 and 90 seconds
         sleep_random(45, 90)
 
 

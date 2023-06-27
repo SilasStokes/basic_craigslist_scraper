@@ -3,32 +3,36 @@ from dataclasses_json import dataclass_json
 from typing import Optional
 
 # SQLAlchemy imports
-from sqlalchemy.orm import MappedAsDataclass
-from sqlalchemy import Column, Float, String, DateTime, Integer
-from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
-from sqlalchemy.orm import Mapped
-from sqlalchemy.orm import mapped_column
+from sqlalchemy import Column, Float, String, DateTime, Integer, select, create_engine
+from sqlalchemy.orm import Session, Mapped, mapped_column, DeclarativeBase, MappedAsDataclass
 
-from sqlalchemy import select
+
+@dataclass
+class email:
+    send_alerts: bool
+    src: str
+    dst: list[str]
+    email_key: str
+
+
+@dataclass
+class sms:
+    send_alerts: bool
+    src: str
+    dst: list[str]
+    twilio_account_sid: str
+    twilio_auth_token: str
 
 
 @dataclass
 class Config:
     urls: list[str]
-    send_email_alerts: bool
-    src_email: str
-    dst_emails: str
-    email_key: str
-    send_sms_alerts: bool
-    src_phone_number: str
-    dst_phone_numbers: str
-    twilio_account_sid: str
-    twilio_auth_token: str
+    email: email
+    sms: sms
     db_user: str
     db_password: str
 
+# format is postgresql://username:password@host:port/database
 
 
 # format is postgresql://username:password@host:port/database
@@ -37,13 +41,15 @@ def get_engine(user: str = 'postgres', password: str = 'password', host: str = '
     engine = create_engine(SQLALCHEMY_DATABASE_URL, echo=echo)
     return engine
 
+
 class Base(MappedAsDataclass, DeclarativeBase):
     pass
+
 
 def get_db(table_name: str):
     class db_listing_entry(Base):
         __tablename__ = f'cl_table_{table_name}'
-        id: Mapped[int] = mapped_column(Integer,init=False,  primary_key=True)
+        id: Mapped[int] = mapped_column(Integer, init=False,  primary_key=True)
         link: Mapped[str] = mapped_column(String)
         title: Mapped[str] = mapped_column(String)
         cl_id: Mapped[str] = mapped_column(String)
