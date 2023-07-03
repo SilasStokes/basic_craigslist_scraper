@@ -29,8 +29,8 @@ from twilio.rest import Client
 # setting up program variables:
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--config', default='./config/config.json',
-                    help='pass the file path to your keyfile')
+parser.add_argument('-c', '--config', default='./config/config.json',
+                    help='pass the file path to your config file. Defaults to ./config/config.json. there\'s an example config file in ./config/example_config.json')
 
 cl_args = parser.parse_args()
 

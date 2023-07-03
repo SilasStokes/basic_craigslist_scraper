@@ -44,10 +44,15 @@ once installed run `pip install -r requirements.txt`
 1. Install with `apt install postgresql`
 2. login to postgres `sudo -u postgres psql`
 3. set the password `\password postgres`
-4. create the database `CREAT DATABASE craigslist;`
+4. create the database `CREATE DATABASE craigslist;`
 
 Finally, update your `config.json` with your username and password (both are set to `postgres` here)
 
+### To run:
+```
+python main.py -c ./path/to/your/config
+```
+when the `-c` config path is not passed it's assumed to be `./config/config.json`
 
 # To set up email:
 suprisingly simple with gmail.
@@ -63,10 +68,3 @@ suprisingly simple with gmail.
     "password": "passcode-google-gave-you"
 }
 ```
-
-
-
-# to set up phone number: 
-'''
-TODO!
-'''

@@ -16,5 +16,18 @@
     "twilio_account_sid": "1234",
     "twilio_auth_token": "1234",
     "db_user": "postgres",
-    "db_password": "postgres"
+    "db_password": "postgres",
+    "filters": [
+        "dirt",
+        "soil",
+        "mulch",
+        "compost",
+        "gravel",
+        "sand",
+        "rock",
+        "bark",
+        "wood chips",
+        "woodchips",
+        "wood-chips"
+    ]
 }
