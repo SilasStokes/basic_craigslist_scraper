@@ -163,17 +163,19 @@ def send_error_alert(error: str):
         to=config.dst_phone_numbers
     )
 
-
-def send_sms_alert(alert):
+def send_sms(msg: str):
+    printInfo('Sending: ', msg)
     client = Client(config.twilio_account_sid,
                     config.twilio_auth_token)
-    message_body = f'title: {alert.title}\nscraped: {alert.time_scraped}\nposted: {alert.time_posted}\nlocation:{alert.location}\n{alert.link}'
-    printInfo('Sending: ', message_body)
     client.messages.create(
-        body=message_body,
+        body=msg,
         from_=config.src_phone_number,
         to=config.dst_phone_numbers
     )
+
+def text_db_row(alert):
+    message_body = f'title: {alert.title}\nscraped: {alert.time_scraped}\nposted: {alert.time_posted}\nlocation:{alert.location}\n{alert.link}'
+    send_sms(message_body)
 
 
 def send_alert(alert):
@@ -181,7 +183,7 @@ def send_alert(alert):
     # if bool(config.email.send_alerts):
     #     send_email_alert(alert)
     if bool(config.send_sms_alerts):
-        send_sms_alert(alert)
+        text_db_row(alert)
 
 
 def sleep_random(lval, rval):
@@ -201,7 +203,9 @@ def main():
     while True:
         # get results
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        text_msg = ''
         for i, url in enumerate(config.urls):
+
             # returns the number of new listings
             scrape(url, timestamp)
             if intial_loop:
@@ -211,7 +215,12 @@ def main():
                 qry = select(db).where(db.time_scraped == timestamp, ~or_(*db_query_filters))
                 for i, listing in enumerate(session.scalars(qry)):
                     printInfo(f'{i}. {listing.title} : {listing.link}')
-                    send_alert(listing)
+                    if config.combine_texts:
+                        text_msg += f'{listing.title} : {listing.link}\n'
+                    else: send_alert(listing)
+
+            if config.combine_texts:
+                send_sms(text_msg)
 
             # sleep before we get the next url result
             if i != len(config.urls) - 1:

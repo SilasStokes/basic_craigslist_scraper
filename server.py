@@ -13,6 +13,8 @@ from twilio.request_validator import RequestValidator
 # custom imports
 from prettyPrint import printError, printInfo, printSuccess, welcome_message
 
+from models import Config
+
 
 # attach server instance to this with uvicorn server:app --reload
 app = FastAPI()
@@ -63,24 +65,95 @@ def stop(config_path: str):
 
 def restart(config_path: str):
     stop(config_path)
-    start(config_path)
+    return start(config_path)
 
 def filter(config_path: str, filter: str):
-    ...
+    try:
+        with open(config_path) as json_file:
+            config = Config(**json.load(json_file))
+    except Exception as exc:
+        printError(
+            f'check config file - something is broken.{Exception=} {exc=}. Exiting...')
+        return "failed to add filter"
+
+    config.filters.append(filter)
+
+    with open(config_path, 'w') as json_file:
+        json.dump(config, json_file)
+
+    return restart(config_path)
 
 def remove_filter(config_path: str, filter: str):
-    ...
+    try:
+        with open(config_path) as json_file:
+            config = Config(**json.load(json_file))
+    except Exception as exc:
+        printError(
+            f'check config file - something is broken.{Exception=} {exc=}. Exiting...')
+        return "failed to add filter"
+
+    config.filters.remove(filter)
+
+    with open(config_path, 'w') as json_file:
+        json.dump(config, json_file)
+
+    return restart(config_path)
 
 def help(config_path: str):
+    return """
+    bot start - start the bot
+    bot stop - stop the bot
+    bot restart - restart the bot
+    bot filter <filter> - add a filter to the bot
+    bot remove_filter <filter> - remove a filter from the bot
+    bot add_link <link> - add a link to the bot
+    bot remove_link <link> - remove a link from the bot
+    """
     ...
 
 def add_link(config_path: str, link: str):
-    ...
+    try:
+        with open(config_path) as json_file:
+            config = Config(**json.load(json_file))
+    except Exception as exc:
+        printError(
+            f'check config file - something is broken.{Exception=} {exc=}. Exiting...')
+        return "failed to add filter"
 
-def remove_link(config_path: str, link: str):
-    ...
+    config.urls.append(link)
 
+    with open(config_path, 'w') as json_file:
+        json.dump(config, json_file)
 
+    return restart(config_path)
+
+def remove_link(config_path: str, link_index: int):
+    try:
+        with open(config_path) as json_file:
+            config = Config(**json.load(json_file))
+    except Exception as exc:
+        printError(
+            f'check config file - something is broken.{Exception=} {exc=}. Exiting...')
+        return "failed to add filter"
+
+    del config.urls[link_index]
+
+    with open(config_path, 'w') as json_file:
+        json.dump(config, json_file)
+
+    return restart(config_path)
+
+def list_links(config_path: str):
+    try:
+        with open(config_path) as json_file:
+            config = Config(**json.load(json_file))
+    except Exception as exc:
+        printError(
+            f'check config file - something is broken.{Exception=} {exc=}. Exiting...')
+        return "failed to add filter"
+
+    strings = [ f"{i}: {link}" for i, link in enumerate(config.urls) ]
+    return "\n".join(strings)
 
 # TODO:
 # 1. Why does fastAPI require capitol letters for the first letter of the params?

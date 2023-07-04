@@ -22,6 +22,7 @@ class Config:
     db_user: str
     db_password: str
     filters: list[str]
+    combine_texts: bool
 
 # format is postgresql://username:password@host:port/database
 
