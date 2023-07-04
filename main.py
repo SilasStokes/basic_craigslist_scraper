@@ -19,6 +19,9 @@ import time
 import datetime
 import argparse
 
+from sqlalchemy import case, func, or_, select
+from sqlalchemy.dialects import postgresql
+
 # custom imports:
 from models import get_engine, Config, Base, get_db, Session
 from prettyPrint import printError, printInfo, printSuccess, welcome_message
@@ -119,7 +122,9 @@ def scrape(url: str, timestamp: str):
         num_listings = len(listings)
         items = 0
         for listing in listings:
-            if not session.query(db).filter(db.cl_id == listing.cl_id).first():
+            qry = select(db).where(db.cl_id == listing.cl_id)
+            if not session.scalars(qry).one():
+            # if not session.query(db).filter(db.cl_id == listing.cl_id).first():
                 printInfo('DB - adding new listing: ', listing, '\n')
                 items += 1
                 session.add(listing)
@@ -191,6 +196,7 @@ def sleep_random(lval, rval):
 
 def main():
     welcome_message()
+    db_query_filters = [ db.title.regexp_match(f'\y({word})\y', 'ix')  for word in config.filters]
     intial_loop = True
     while True:
         # get results
@@ -202,9 +208,8 @@ def main():
                 continue
 
             with Session(engine) as session:
-                listings = session.query(db).filter(
-                    db.time_scraped == timestamp)
-                for i,  listing in enumerate(listings):
+                qry = select(db).where(db.time_scraped == timestamp, ~or_(*db_query_filters))
+                for i, listing in enumerate(session.scalars(qry)):
                     printInfo(f'{i}. {listing.title} : {listing.link}')
                     send_alert(listing)
 

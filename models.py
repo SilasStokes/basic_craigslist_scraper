@@ -21,6 +21,7 @@ class Config:
     twilio_auth_token: str
     db_user: str
     db_password: str
+    filters: list[str]
 
 # format is postgresql://username:password@host:port/database
 
@@ -47,6 +48,7 @@ def get_db(table_name: str):
         time_posted: Mapped[str] = mapped_column(String)
         location: Mapped[str] = mapped_column(String)
         time_scraped: Mapped[str] = mapped_column(String)
+
 
         def __repr__(self):
             return f'link: {self.link}\ntitle: {self.title}\nid: {self.cl_id}\nscreenshot_path: {self.screenshot_path}\ntime_posted: {self.time_posted}\nlocation: {self.location}\ntime_scraped: {self.time_scraped}'

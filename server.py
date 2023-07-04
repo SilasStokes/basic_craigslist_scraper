@@ -68,7 +68,16 @@ def restart(config_path: str):
 def filter(config_path: str, filter: str):
     ...
 
+def remove_filter(config_path: str, filter: str):
+    ...
+
 def help(config_path: str):
+    ...
+
+def add_link(config_path: str, link: str):
+    ...
+
+def remove_link(config_path: str, link: str):
     ...
 
 
