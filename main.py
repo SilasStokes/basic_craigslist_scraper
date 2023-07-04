@@ -123,7 +123,7 @@ def scrape(url: str, timestamp: str):
         items = 0
         for listing in listings:
             qry = select(db).where(db.cl_id == listing.cl_id)
-            if not session.scalars(qry).one():
+            if not session.scalars(qry).first():
             # if not session.query(db).filter(db.cl_id == listing.cl_id).first():
                 printInfo('DB - adding new listing: ', listing, '\n')
                 items += 1
@@ -216,7 +216,7 @@ def main():
                 for i, listing in enumerate(session.scalars(qry)):
                     printInfo(f'{i}. {listing.title} : {listing.link}')
                     if config.combine_texts:
-                        text_msg += f'{listing.title} : {listing.link}\n'
+                        text_msg += f'{listing.title} : {listing.link}\n\n'
                     else: send_alert(listing)
 
             if config.combine_texts:
