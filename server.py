@@ -1,6 +1,7 @@
 # python imports
 import os
 import subprocess
+import dataclasses
 
 import json
 
@@ -27,17 +28,38 @@ def read_root():
 
 # phone number to config map:
 with open("./config/serverconfig.json") as json_file:
-    phone_to_config = json.load(json_file)
+    server_config = json.load(json_file)
+
+def get_config(config_path: str):
+    try:
+        with open(config_path) as json_file:
+            config = Config(**json.load(json_file))
+    except Exception as exc:
+        printError(
+            f'check config file - something is broken.{Exception=} {exc=}. Exiting...')
+        raise exc
+    return config
+
+def write_config(config_path: str, config: Config):
+    os.rename(config_path, f"{config_path}.backup")
+    try:
+        with open(config_path, 'w') as json_file:
+            json.dump(dataclasses.asdict(config), json_file, indent=4)
+    except Exception as exc:
+        printError(
+            f'check config file - something is broken.{Exception=} {exc=}. Exiting...')
+        raise exc
+    os.remove(f"{config_path}.backup")
 
 
-def start(config_path: str):
+def start_scraper(config_path: str):
     printInfo("Starting bot...")
     subprocess.Popen(
         ["python", "main.py", "--config", config_path])
     printSuccess("Bot started!")
     return "success"
 
-def stop(config_path: str):
+def stop_scraper(config_path: str):
     """
     finds the pid of the bot and kills it. the output of ps looks like:
     PID TTY           TIME CMD
@@ -51,108 +73,117 @@ def stop(config_path: str):
         printError("Error getting process list")
         return
     lines = ps.stdout.splitlines()
+    printInfo(lines)
+
     for line in lines:
         if config_path in line:
             pid = line.split()[0]
-            kill = subprocess.Popen(["kill", pid])
-            if kill.returncode != 0:
-                printError("Error stopping bot")
-                break
+            subprocess.Popen(["kill", pid])
             printSuccess("Bot stopped!")
             return "success"
 
-    return "failed to stop bot."
+    return "failed"
 
-def restart(config_path: str):
-    stop(config_path)
-    return start(config_path)
+def restart_scraper(config_path: str):
+    stop = stop_scraper(config_path)
+    return start_scraper(config_path) if stop == "success" else "did not restart because was not running"
 
-def filter(config_path: str, filter: str):
+def add_filter(config_path: str, filter: str):
     try:
-        with open(config_path) as json_file:
-            config = Config(**json.load(json_file))
+        config = get_config(config_path)
     except Exception as exc:
-        printError(
-            f'check config file - something is broken.{Exception=} {exc=}. Exiting...')
-        return "failed to add filter"
+        return f"failed to add filter, {exc=}"
 
     config.filters.append(filter)
 
-    with open(config_path, 'w') as json_file:
-        json.dump(config, json_file)
+    try:
+        write_config(config_path, config)
+    except Exception as exc:
+        return f"failed to add filter, error writing back to config file. {exc=}"
 
-    return restart(config_path)
+    return restart_scraper(config_path)
 
 def remove_filter(config_path: str, filter: str):
     try:
-        with open(config_path) as json_file:
-            config = Config(**json.load(json_file))
+        config = get_config(config_path)
     except Exception as exc:
-        printError(
-            f'check config file - something is broken.{Exception=} {exc=}. Exiting...')
-        return "failed to add filter"
+        return f"failed to open config file, cannot rm filter, {exc=}"
 
     config.filters.remove(filter)
 
-    with open(config_path, 'w') as json_file:
-        json.dump(config, json_file)
+    try:
+        write_config(config_path, config)
+    except Exception as exc:
+        return f"failed to write to config, {exc=}"
 
-    return restart(config_path)
+    return restart_scraper(config_path)
 
-def help(config_path: str):
+def help():
     return """
-    bot start - start the bot
-    bot stop - stop the bot
-    bot restart - restart the bot
-    bot filter <filter> - add a filter to the bot
-    bot remove_filter <filter> - remove a filter from the bot
-    bot add_link <link> - add a link to the bot
-    bot remove_link <link> - remove a link from the bot
+    All commands are case insensitive. 
+
+    bstart - start the bot
+    bstop - stop the bot
+    re - restart the bot
+
+    h - print this help message
+
+    f <filter> - add a filter to the bot
+    rf <filter> - remove a filter from the bot
+    lf - list all filters
+    l <link> - add a link to the bot
+    ll - list all links
+    rl <index> - remove a link from the bot, use "ll" to see indexes
     """
-    ...
 
 def add_link(config_path: str, link: str):
     try:
-        with open(config_path) as json_file:
-            config = Config(**json.load(json_file))
+        config = get_config(config_path)
     except Exception as exc:
-        printError(
-            f'check config file - something is broken.{Exception=} {exc=}. Exiting...')
-        return "failed to add filter"
+        return f"error opening config file. {exc=}"
 
     config.urls.append(link)
 
-    with open(config_path, 'w') as json_file:
-        json.dump(config, json_file)
+    try:
+        write_config(config_path, config)
+    except Exception as exc:
+        return f"error writing back to config file. {exc=}"
 
-    return restart(config_path)
+    return restart_scraper(config_path)
 
 def remove_link(config_path: str, link_index: int):
     try:
-        with open(config_path) as json_file:
-            config = Config(**json.load(json_file))
+        config = get_config(config_path)
     except Exception as exc:
-        printError(
-            f'check config file - something is broken.{Exception=} {exc=}. Exiting...')
-        return "failed to add filter"
+        return f"error opening config file. {exc=}"
+
 
     del config.urls[link_index]
 
-    with open(config_path, 'w') as json_file:
-        json.dump(config, json_file)
+    try:
+        write_config(config_path, config)
+    except Exception as exc:
+        return f"error writing back to config file. {exc=}"
 
-    return restart(config_path)
+    return restart_scraper(config_path)
+
 
 def list_links(config_path: str):
     try:
-        with open(config_path) as json_file:
-            config = Config(**json.load(json_file))
+        config = get_config(config_path)
     except Exception as exc:
-        printError(
-            f'check config file - something is broken.{Exception=} {exc=}. Exiting...')
-        return "failed to add filter"
+        return f"error opening config file. {exc=}"
 
     strings = [ f"{i}: {link}" for i, link in enumerate(config.urls) ]
+    return "\n".join(strings)
+
+def list_filters(config_path: str):
+    try:
+        config = get_config(config_path)
+    except Exception as exc:
+        return f"error opening config file. {exc=}"
+
+    strings = [ f"{i}: {filter}" for i, filter in enumerate(config.filters) ]
     return "\n".join(strings)
 
 # TODO:
@@ -161,7 +192,8 @@ def list_links(config_path: str):
 async def text(
     request: Request, From: str = Form(...), Body: str = Form(...)
 ):
-    validator = RequestValidator(os.environ["TWILIO_AUTH_TOKEN"])
+    validator = RequestValidator(server_config["twilio_auth_token"])
+    # validator = RequestValidator(os.environ["TWILIO_AUTH_TOKEN"])
     form = await request.form()
     if not validator.validate(
         str(request.url),
@@ -177,32 +209,50 @@ async def text(
     # begin management:
     printInfo(f"Received text from {From}: {Body}")
 
-    config_path = phone_to_config.get(From, "./config/config.json")
+    config_path = server_config["phone_to_config"].get(From, "./config/config.json")
     cmd = [c.lower() for c in Body.split()]
-
-    if cmd[0] != "bot":
-        response.msg(
-            'Please start your message with "bot", available commands are "bot start" and "bot stop"')
-        return Response(content=str(response), media_type="application/xml")
 
 
     # I wanted to make this a dict of functions but I couldn't figure out how to pass different arguments to each function
     # maybe the **kwargs thing?
-    match cmd[1]:
-        case "start":
-            resp = start(config_path)
+    match cmd[0]:
+        case "bstart":
+            resp = start_scraper(config_path)
             response.message(resp)
-        case "stop":
-            resp = stop(config_path)
+        case "bstop":
+            resp = stop_scraper(config_path)
             response.message(resp)
-        case "restart":
-            resp = restart(config_path)
+        case "re":
+            resp = restart_scraper(config_path)
             response.message(resp)
-        case "filter":
-            resp = filter(config_path, cmd[2:].join(" "))
+        case "h":
+            resp = help()
             response.message(resp)
+
+        # link functions:
+        case "l": # add link
+            resp = add_link(config_path, ' '.join(cmd[1:]))
+            response.message(resp)
+        case "rl": # remove link by index
+            resp = remove_link(config_path, int(cmd[1]))
+            response.message(resp)
+        case "ll": # list links
+            resp = list_links(config_path)
+            response.message(resp)
+
+        # filter functions:
+        case "f":
+            resp = add_filter(config_path, ' '.join(cmd[1:]))
+            response.message(resp)
+        case "rf":
+            resp = remove_filter(config_path, ' '.join(cmd[1:]))
+            response.message(resp)
+        case "lf":
+            resp = list_filters(config_path)
+            response.message(resp)
+
         case _:
-            response.msg(
-                'Please start your message with "bot", available commands are "bot start" and "bot stop"')
+            resp = help()
+            response.message(resp)
 
     return Response(content=str(response), media_type="application/xml")

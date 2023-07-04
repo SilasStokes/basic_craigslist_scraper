@@ -54,6 +54,38 @@ python main.py -c ./path/to/your/config
 ```
 when the `-c` config path is not passed it's assumed to be `./config/config.json`
 
+### control the scraper via text message:
+first you'll need to set up a `serverConfig.json` in the `./config` directory. An example file stubbed there currently. The server config file is necessary because I am running the bot for several of my friends, through my single twilio number, and I wanted them to have a way to control the bot remotely. But to do that, I needed to associate their phone number with their unique config file. 
+
+Run the `server.py` file, using 
+```
+uvicorn server:app --reload
+```
+open a new terminal, we're going to use `ngrok` to tunnel our texts to our local server. You will need a free ngrok account to set this up. 
+```
+ngrok http 8000
+```
+Now take the url that ngrok gives and go to the twilio console -> phone numbers -> manage -> active numbers -> the phone number -> message configuration and then paste in the ngrok link where it says "a message comes in (webhook) URL"
+
+Available commands to text the bot are:
+```
+All commands are case insensitive. 
+
+bstart - start the bot
+bstop - stop the bot
+re - restart the bot
+
+h - print this help message
+
+f <filter> - add a filter to the bot
+rf <filter> - remove a filter from the bot
+lf - list all filters
+l <link> - add a link to the bot
+ll - list all links
+rl <index> - remove a link from the bot, use "ll" to see indexes
+```
+
+
 # To set up email:
 suprisingly simple with gmail.
 1. go to the account you want emails to be sent from, (click the 9 squares on the top right of google -> top left says account)
