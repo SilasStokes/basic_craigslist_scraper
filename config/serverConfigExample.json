@@ -1,0 +1,7 @@
+{
+    "phone_to_config":{
+        "+1XXXYYYZZZZ": "./config/config.json"
+    },
+    "twilio_account_sid" : "",
+    "twilio_auth_token" : ""
+}
