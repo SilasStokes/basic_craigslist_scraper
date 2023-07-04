@@ -21,9 +21,9 @@ from models import Config
 app = FastAPI()
 
 
-@app.get("/")
-def read_root():
-    return {"Hello": "World"}
+# @app.get("/")
+# def read_root():
+#     return {"Hello": "World"}
 
 
 # phone number to config map:
@@ -188,7 +188,7 @@ def list_filters(config_path: str):
 
 # TODO:
 # 1. Why does fastAPI require capitol letters for the first letter of the params?
-@app.post("/text")
+@app.post("/")
 async def text(
     request: Request, From: str = Form(...), Body: str = Form(...)
 ):
