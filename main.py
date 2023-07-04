@@ -19,6 +19,9 @@ import time
 import datetime
 import argparse
 
+from sqlalchemy import case, func, or_, select
+from sqlalchemy.dialects import postgresql
+
 # custom imports:
 from models import get_engine, Config, Base, get_db, Session
 from prettyPrint import printError, printInfo, printSuccess, welcome_message
@@ -29,8 +32,8 @@ from twilio.rest import Client
 # setting up program variables:
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--config', default='./config/config.json',
-                    help='pass the file path to your keyfile')
+parser.add_argument('-c', '--config', default='./config/config.json',
+                    help='pass the file path to your config file. Defaults to ./config/config.json. there\'s an example config file in ./config/example_config.json')
 
 cl_args = parser.parse_args()
 
@@ -119,7 +122,9 @@ def scrape(url: str, timestamp: str):
         num_listings = len(listings)
         items = 0
         for listing in listings:
-            if not session.query(db).filter(db.cl_id == listing.cl_id).first():
+            qry = select(db).where(db.cl_id == listing.cl_id)
+            if not session.scalars(qry).first():
+            # if not session.query(db).filter(db.cl_id == listing.cl_id).first():
                 printInfo('DB - adding new listing: ', listing, '\n')
                 items += 1
                 session.add(listing)
@@ -158,17 +163,19 @@ def send_error_alert(error: str):
         to=config.dst_phone_numbers
     )
 
-
-def send_sms_alert(alert):
+def send_sms(msg: str):
+    printInfo('Sending: ', msg)
     client = Client(config.twilio_account_sid,
                     config.twilio_auth_token)
-    message_body = f'title: {alert.title}\nscraped: {alert.time_scraped}\nposted: {alert.time_posted}\nlocation:{alert.location}\n{alert.link}'
-    printInfo('Sending: ', message_body)
     client.messages.create(
-        body=message_body,
+        body=msg,
         from_=config.src_phone_number,
         to=config.dst_phone_numbers
     )
+
+def text_db_row(alert):
+    message_body = f'title: {alert.title}\nscraped: {alert.time_scraped}\nposted: {alert.time_posted}\nlocation:{alert.location}\n{alert.link}'
+    send_sms(message_body)
 
 
 def send_alert(alert):
@@ -176,7 +183,7 @@ def send_alert(alert):
     # if bool(config.email.send_alerts):
     #     send_email_alert(alert)
     if bool(config.send_sms_alerts):
-        send_sms_alert(alert)
+        text_db_row(alert)
 
 
 def sleep_random(lval, rval):
@@ -191,22 +198,29 @@ def sleep_random(lval, rval):
 
 def main():
     welcome_message()
+    db_query_filters = [ db.title.regexp_match(f'\y({word})\y', 'ix')  for word in config.filters]
     intial_loop = True
     while True:
         # get results
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        text_msg = ''
         for i, url in enumerate(config.urls):
+
             # returns the number of new listings
             scrape(url, timestamp)
             if intial_loop:
                 continue
 
             with Session(engine) as session:
-                listings = session.query(db).filter(
-                    db.time_scraped == timestamp)
-                for i,  listing in enumerate(listings):
+                qry = select(db).where(db.time_scraped == timestamp, ~or_(*db_query_filters))
+                for i, listing in enumerate(session.scalars(qry)):
                     printInfo(f'{i}. {listing.title} : {listing.link}')
-                    send_alert(listing)
+                    if config.combine_texts:
+                        text_msg += f'{listing.title} : {listing.link}\n\n'
+                    else: send_alert(listing)
+
+            if text_msg and config.combine_texts:
+                send_sms(text_msg)
 
             # sleep before we get the next url result
             if i != len(config.urls) - 1:

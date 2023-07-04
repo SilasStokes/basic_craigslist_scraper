@@ -44,9 +44,55 @@ once installed run `pip install -r requirements.txt`
 1. Install with `apt install postgresql`
 2. login to postgres `sudo -u postgres psql`
 3. set the password `\password postgres`
-4. create the database `CREAT DATABASE craigslist;`
+4. create the database `CREATE DATABASE craigslist;`
 
 Finally, update your `config.json` with your username and password (both are set to `postgres` here)
+
+### To run:
+```sh
+python main.py -c ./path/to/your/config
+```
+when the `-c` config path is not passed it's assumed to be `./config/config.json`
+
+### control the scraper via text message:
+first you'll need to set up a `serverConfig.json` in the `./config` directory. An example file stubbed there currently. The server config file is necessary because I am running the bot for several of my friends, through my single twilio number, and I wanted them to have a way to control the bot remotely. But to do that, I needed to associate their phone number with their unique config file. 
+
+Install the additional dependencies:
+```sh
+pip install fastapi
+pip install "uvicorn[standard]"
+```
+
+Set up `ngrok`. If you don't have an account/auth_token, you'll have to set one up. Instructions linked here: https://ngrok.com/download.
+
+
+Run the `server.py` file, using 
+```sh
+uvicorn server:app --reload
+```
+open a new terminal. We're going to connect `ngrok` to our locally hosted fastapi instance, which is served by default on `http://127.0.0.1:8000/`.
+```sh
+ngrok http 8000
+```
+Now take the url that ngrok gives and go to the twilio console -> phone numbers -> manage -> active numbers -> the phone number -> message configuration and then paste in the ngrok link where it says "a message comes in (webhook) URL"
+
+Available commands to text the bot are:
+```
+All commands are case insensitive. 
+
+bstart - start the bot
+bstop - stop the bot
+re - restart the bot
+
+h - print this help message
+
+f <filter> - add a filter to the bot
+rf <filter> - remove a filter from the bot
+lf - list all filters
+l <link> - add a link to the bot
+ll - list all links
+rl <index> - remove a link from the bot, use "ll" to see indexes
+```
 
 
 # To set up email:
@@ -63,10 +109,3 @@ suprisingly simple with gmail.
     "password": "passcode-google-gave-you"
 }
 ```
-
-
-
-# to set up phone number: 
-'''
-TODO!
-'''

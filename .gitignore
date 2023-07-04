@@ -1,10 +1,11 @@
 .venv
 venv
 config.json
+serverconfig.json
 .vscode
 drivers
 geckodriver.log
 configs
-notes.md
 __pycache__
 .DS_Store
+.env
