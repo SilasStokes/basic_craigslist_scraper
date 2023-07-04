@@ -219,7 +219,7 @@ def main():
                         text_msg += f'{listing.title} : {listing.link}\n\n'
                     else: send_alert(listing)
 
-            if config.combine_texts:
+            if text_msg and config.combine_texts:
                 send_sms(text_msg)
 
             # sleep before we get the next url result
