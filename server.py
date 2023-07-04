@@ -27,7 +27,7 @@ app = FastAPI()
 
 
 # phone number to config map:
-with open("./config/serverconfig.json") as json_file:
+with open("./config/serverConfig.json") as json_file:
     server_config = json.load(json_file)
 
 def get_config(config_path: str):
