@@ -1,31 +1,7 @@
 # basic_craigslist_scraper
 
-Goal of this repo is to flesh out what it takes to scrape craigslist before I port the [craigslist python package](https://github.com/juliomalegria/python-craigslist) to use selenium instead of requests due to craigslist blocking requests that don't come from a browser with javascript enabled, [documented here](https://github.com/juliomalegria/python-craigslist/issues/116)
+this is a python script that will take any arbitrary link from craigslist, scrape it, and text you when new items appear. I use it to let me know when free items get posted but it could easily be deployed to watch for niche video game supplies. I have it deployed on a raspberry pi using headless ubuntu server 64bit, afaik the codebase would take some modification to work on other OS's. 
 
-To install the python packages use `pip install -r requirements.txt`.
-
-# Todo List:
-- [ ] add the math to calculate the scraped time and the posted at (which cl presents as "4 mins ago") so timing can be correctly stored in the db. 
-- [ ] Use Python package Fake User Agent to randomly generate a new user agent every request. 
-- [ ] correct the database datatypes, right now they are all strings...
-- [ ] make the scraped_at property a foreign key
-- [ ] dockerize the script so it's easily deployable for others
-- [ ] add the ability to kill all child process init'd by the server.
-
-
-# Done
-- [x] Use logging instead of prints (Fixed by connor, thank you!)
-- [x] Allow the script to be managed via the user texting the twilio number e.g user can start and stop, add a new link, give filter keywords.
-- [x] Add filter section to config, no more notifications about free dirt. 
-- [x] create a parent scripts that can schedule and manage all the individual profiles in ./configs. (make an active directory in configs and put all the configs that need to be managed there)
-- [x] Add a feature where all the texts will get added to a single text. 
-- [x] parse config file using something like dataclass or pydantic so inputs are autovalidated
-- [x] Use SQLAlchemy 2.0 feature where you can you db model as dataclass. [like this](https://docs.sqlalchemy.org/en/20/orm/dataclasses.html)
-- [x] clean up the database interpolation. 
-- [x] write the code to integrate with twilio to get notifications via sms. 
-- [x] allow human readable csv files to be selected instead of database (maybe command line argument?)
-- [x] change the scrape function to account for multiple urls in the craigslist url array in the config.json
-- [x] save the time that the post was posted + include that in the text. 
 
 # Setup:
 
@@ -47,7 +23,18 @@ once installed run `pip install -r requirements.txt`
 3. set the password `\password postgres`
 4. create the database `CREATE DATABASE craigslist;`
 
-Finally, update your `config.json` with your username and password (both are set to `postgres` here)
+Finally, update your `config.json` with your username and password (both are set to `postgres` by default)
+### config set up:
+there's an example config file stubbed out in `./config/configExample.json`. Most of the information should be self examplanatory. You'll want to save it as `./config/config.json` as that is where the script searches for it on start, unless you pass a different path (documented below in the `to run` section).
+
+**urls**: The bot works by looking at the url every minute or so and then notifying you when things change, thus you need to use craigslist to generate a url. Go to your local craigslist website, search the item you want to watch for (in my case I just click on the free tag), and then use the filters on the left side of the browser to tune to tune your query. I always use the map to change my radius to my neighborhood since the default is a 60 miles which yields way too many notifications. Craigslist supports operators in it's search bar so you can also fine tune your search with [this syntax](https://www.craigslist.org/about/help/search). [Here's a reddit post with more detail about the syntax.](https://www.reddit.com/r/audiophile/comments/1x4r6i/a_guide_to_creating_craigslist_search_strings_to/). 
+
+**filters**: They match a word in the title surrounded by whitespace, not substrings, so adding "dirt" to the filters array would still notify you of listings with "dirty" in the title. The filters and titles are case insensitive. 
+
+**email**: I initially wanted to get notified by email but found it to be slow. I believe the codebase would need work to support emails again, so you can just leave the email portion of the config file blank. 
+
+**combine texts**: Just aggregates all the changes into one text so you don't get spammed. Is good when your query gets updated a lot.
+
 
 ### To run:
 ```sh
@@ -93,20 +80,37 @@ lf - list all filters
 l <link> - add a link to the bot
 ll - list all links
 rl <index> - remove a link from the bot, use "ll" to see indexes
+
+ct: toggle the combine texts.
 ```
 
+### additional tidbit:
+If you use an iPhone and the craigslist app, I wrote a iOS shortcut to quickly send a templated email to the poster. 
 
-# To set up email:
-suprisingly simple with gmail.
-1. go to the account you want emails to be sent from, (click the 9 squares on the top right of google -> top left says account)
-2. go to security -> signing in to google -> 2-step verification : turn it on and go through the process
-3. go back to security -> signin to google then click on app passwords and generate a new one.
-4. create a passcode.key file in this directory and add googles generated passcode with this format:
-```
-{
-    "email": "your-email@gmail.com", 
-    "source_email": "where-you-want-emails-sent-from@gmail.com", 
-    "destination_email": "where-you-want-them-sent-to@gmail.com", 
-    "password": "passcode-google-gave-you"
-}
-```
+I had some trouble sharing the shortcut so you'll need to remake it yourself based on this picture. 
+
+![picture of the ios shortcut](./ios-shortcut.jpg)
+
+
+# Todo List:
+- [ ] add the math to calculate the scraped time and the posted at (which cl presents as "4 mins ago") so timing can be correctly stored in the db. 
+- [ ] Use Python package Fake User Agent to randomly generate a new user agent every request. 
+- [ ] correct the database datatypes, right now they are all strings...
+- [ ] make the scraped_at property a foreign key
+- [ ] dockerize the script so it's easily deployable for others
+- [ ] add the ability to kill all child process init'd by the server.
+
+
+# Done
+- [x] Use logging instead of prints (Fixed by connor, thank you!)
+- [x] Allow the script to be managed via the user texting the twilio number e.g user can start and stop, add a new link, give filter keywords.
+- [x] Add filter section to config, no more notifications about free dirt. 
+- [x] create a parent scripts that can schedule and manage all the individual profiles in ./configs. (make an active directory in configs and put all the configs that need to be managed there)
+- [x] Add a feature where all the texts will get added to a single text. 
+- [x] parse config file using something like dataclass or pydantic so inputs are autovalidated
+- [x] Use SQLAlchemy 2.0 feature where you can you db model as dataclass. [like this](https://docs.sqlalchemy.org/en/20/orm/dataclasses.html)
+- [x] clean up the database interpolation. 
+- [x] write the code to integrate with twilio to get notifications via sms. 
+- [x] allow human readable csv files to be selected instead of database (maybe command line argument?)
+- [x] change the scrape function to account for multiple urls in the craigslist url array in the config.json
+- [x] save the time that the post was posted + include that in the text. 
