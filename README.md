@@ -5,19 +5,20 @@ Goal of this repo is to flesh out what it takes to scrape craigslist before I po
 To install the python packages use `pip install -r requirements.txt`.
 
 # Todo List:
-- [ ] Add a feature where all the texts will get added to a single text. 
 - [ ] add the math to calculate the scraped time and the posted at (which cl presents as "4 mins ago") so timing can be correctly stored in the db. 
-- [ ] create a parent scripts that can schedule and manage all the individual profiles in ./configs. (make an active directory in configs and put all the configs that need to be managed there)
-- [ ] Allow the script to be managed via the user texting the twilio number e.g user can start and stop, add a new link, give filter keywords.
-- [ ] Add filter section to config, no more notifications about free dirt. 
 - [ ] Use Python package Fake User Agent to randomly generate a new user agent every request. 
-- [ ] Use logging instead of prints
 - [ ] correct the database datatypes, right now they are all strings...
 - [ ] make the scraped_at property a foreign key
 - [ ] dockerize the script so it's easily deployable for others
+- [ ] add the ability to kill all child process init'd by the server.
 
 
 # Done
+- [x] Use logging instead of prints (Fixed by connor, thank you!)
+- [x] Allow the script to be managed via the user texting the twilio number e.g user can start and stop, add a new link, give filter keywords.
+- [x] Add filter section to config, no more notifications about free dirt. 
+- [x] create a parent scripts that can schedule and manage all the individual profiles in ./configs. (make an active directory in configs and put all the configs that need to be managed there)
+- [x] Add a feature where all the texts will get added to a single text. 
 - [x] parse config file using something like dataclass or pydantic so inputs are autovalidated
 - [x] Use SQLAlchemy 2.0 feature where you can you db model as dataclass. [like this](https://docs.sqlalchemy.org/en/20/orm/dataclasses.html)
 - [x] clean up the database interpolation. 

@@ -136,6 +136,8 @@ def help():
     l <link> - add a link to the bot
     ll - list all links
     rl <index> - remove a link from the bot, use "ll" to see indexes
+
+    ct - toggle combining texts into one message
     """
 
 def add_link(config_path: str, link: str):
