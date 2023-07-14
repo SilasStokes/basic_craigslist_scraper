@@ -68,7 +68,7 @@ def stop_scraper(config_path: str):
     2066 ttys002    0:00.41 /opt/homebrew/Cellar/python@3.11/3.11.2_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python main.py -c ./configs/myconfig.json
     """
     printInfo("Stopping bot...")
-    ps = subprocess.run(["ps"], capture_output=True, text=True)
+    ps = subprocess.run(["ps", "-aux"], capture_output=True, text=True)
     if ps.returncode != 0:
         printError("Error getting process list")
         return
