@@ -186,6 +186,21 @@ def list_filters(config_path: str):
     strings = [ f"{i}: {filter}" for i, filter in enumerate(config.filters) ]
     return "\n".join(strings)
 
+def flip_combine_texts(config_path: str):
+    try:
+        config = get_config(config_path)
+    except Exception as exc:
+        return f"error opening config file. {exc=}"
+
+    config.combine_texts = not config.combine_texts
+
+    try:
+        write_config(config_path, config)
+    except Exception as exc:
+        return f"error writing back to config file. {exc=}"
+
+    return restart_scraper(config_path)
+
 # TODO:
 # 1. Why does fastAPI require capitol letters for the first letter of the params?
 @app.post("/")
@@ -248,6 +263,11 @@ async def text(
             resp = remove_filter(config_path, ' '.join(cmd[1:]))
             response.message(resp)
         case "lf":
+            resp = list_filters(config_path)
+            response.message(resp)
+        
+        # turn off text message combinations:
+        case "ct":
             resp = list_filters(config_path)
             response.message(resp)
 
