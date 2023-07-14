@@ -68,6 +68,7 @@ def stop_scraper(config_path: str):
     2066 ttys002    0:00.41 /opt/homebrew/Cellar/python@3.11/3.11.2_1/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python main.py -c ./configs/myconfig.json
     """
     printInfo("Stopping bot...")
+    # the -aux flag appears to only work on the rpi and not on macos. ps by itself works on macos
     ps = subprocess.run(["ps", "-aux"], capture_output=True, text=True)
     if ps.returncode != 0:
         printError("Error getting process list")
@@ -77,7 +78,8 @@ def stop_scraper(config_path: str):
 
     for line in lines:
         if config_path in line:
-            pid = line.split()[0]
+            # index is 0 if ps is used instead of ps -aux 
+            pid = line.split()[1]
             subprocess.Popen(["kill", pid])
             printSuccess("Bot stopped!")
             return "success"
