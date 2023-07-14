@@ -27,13 +27,13 @@ Finally, update your `config.json` with your username and password (both are set
 ### config set up:
 there's an example config file stubbed out in `./config/configExample.json`. Most of the information should be self examplanatory. You'll want to save it as `./config/config.json` as that is where the script searches for it on start, unless you pass a different path (documented below in the `to run` section).
 
-**urls**: The bot works by looking at the url every minute or so and then notifying you when things change, thus you need to use craigslist to generate a url. Go to your local craigslist website, search the item you want to watch for (in my case I just click on the free tag), and then use the filters on the left side of the browser to tune to tune your query. I always use the map to change my radius to my neighborhood since the default is a 60 miles which yields way too many notifications. Craigslist supports operators in it's search bar so you can also fine tune your search with [this syntax](https://www.craigslist.org/about/help/search). [Here's a reddit post with more detail about the syntax.](https://www.reddit.com/r/audiophile/comments/1x4r6i/a_guide_to_creating_craigslist_search_strings_to/). 
+`urls`: The bot works by looking at the url every minute or so and then notifying you when things change, thus you need to use craigslist to generate a url. Go to your local craigslist website, search the item you want to watch for (in my case I just click on the free tag), and then use the filters on the left side of the browser to tune to tune your query. I always use the map to change my radius to my neighborhood since the default is a 60 miles which yields way too many notifications. Craigslist supports operators in it's search bar so you can also fine tune your search with [this syntax](https://www.craigslist.org/about/help/search). [Here's a reddit post with more detail about the syntax.](https://www.reddit.com/r/audiophile/comments/1x4r6i/a_guide_to_creating_craigslist_search_strings_to/). Be sure sort is set to chronological, sometimes mine will default to suggested.
 
-**filters**: They match a word in the title surrounded by whitespace, not substrings, so adding "dirt" to the filters array would still notify you of listings with "dirty" in the title. The filters and titles are case insensitive. 
+`filters`: They match a word in the title surrounded by whitespace, not substrings, so adding "dirt" to the filters array would still notify you of listings with "dirty" in the title. The filters and titles are case insensitive. 
 
-**email**: I initially wanted to get notified by email but found it to be slow. I believe the codebase would need work to support emails again, so you can just leave the email portion of the config file blank. 
+`email`: I initially wanted to get notified by email but found it to be slow. I believe the codebase would need work to support emails again, so you can just leave the email portion of the config file blank. 
 
-**combine texts**: Just aggregates all the changes into one text so you don't get spammed. Is good when your query gets updated a lot.
+`combine texts`: Just aggregates all the changes into one text so you don't get spammed. Is good when your query gets updated a lot.
 
 
 ### To run:
