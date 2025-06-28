@@ -91,7 +91,7 @@ def translate_html_elements(timestamp: str, browser):
         meta_string = el.find_element(by=By.CLASS_NAME, value='meta').text
         posted_time, location = meta_string.split(sep='·')
 
-        result = db(link=link, title=title, cl_id=cl_id, screenshot_path='',
+        result = db(link=link, title=title, cl_id=cl_id,
                     time_posted=posted_time, location=location, time_scraped=timestamp)
         listings.append(result)
     return listings
