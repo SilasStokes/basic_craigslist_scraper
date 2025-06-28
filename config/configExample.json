@@ -2,13 +2,13 @@
     "urls": [
         "https://seattle.craigslist.org/search/seattle-wa/zip?lat=47.5997&lon=-122.3128&search_distance=6.7#search=1~gallery~0~0"
     ],
-    "send_email_alerts": "False",
+    "send_email_alerts": false,
     "src_email": "where-you-want-emails-sent-from@gmail.com",
     "dst_emails": [
         "your-email@gmail.com"
     ],
     "email_key": "",
-    "send_sms_alerts": "True",
+    "send_sms_alerts": false,
     "src_phone_number": "+12345678901",
     "dst_phone_numbers": [
         "+12345678901"
@@ -30,5 +30,6 @@
         "woodchips",
         "wood-chips"
     ],
-    "combine_texts": "True"
+    "discord_webhook_url": "https://discord.com/api/webhooks/...",
+    "send_discord_alerts": true
 }

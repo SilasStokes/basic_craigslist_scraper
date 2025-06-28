@@ -22,6 +22,8 @@ class Config:
     db_user: str
     db_password: str
     filters: list[str]
+    discord_webhook_url: str
+    send_discord_alerts: bool
 
 # format is postgresql://username:password@host:port/database
 

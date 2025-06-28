@@ -12,6 +12,9 @@ from email.message import EmailMessage
 import smtplib
 import ssl
 
+# discord imports
+import requests
+
 # misc imports
 import random
 import os
@@ -138,6 +141,26 @@ def scrape(url: str, timestamp: str):
 
     return num_listings
 
+def send_discord_alert(alert):
+    if not config.discord_webhook_url:
+        printError("Discord webhook URL not set in config.")
+        return
+    message_body = (
+        f"@here\n"
+        f"**Craigslist Alert**\n"
+        f"**Title:** {alert.title}\n"
+        f"**Scraped:** {alert.time_scraped}\n"
+        f"**Posted:** {alert.time_posted}\n"
+        f"**Location:** {alert.location}\n"
+        f"{alert.link}"
+    )
+    data = {"content": message_body}
+    try:
+        response = requests.post(config.discord_webhook_url, json=data)
+        if response.status_code != 204 and response.status_code != 200:
+            printError(f"Discord webhook failed: {response.status_code} {response.text}")
+    except Exception as exc:
+        printError(f"Exception sending Discord webhook: {exc}")
 
 def send_email_alert(alert):
     msg = EmailMessage()
@@ -179,11 +202,16 @@ def text_db_row(alert):
 
 # alert is a db row object
 def send_alert(alert):
-    # email not working
-    # if bool(config.email.send_alerts):
+    # Email (if enabled) 
+    # TODO - fix email alerts
+    # if getattr(config, "send_email_alerts", False):
     #     send_email_alert(alert)
-    if bool(config.send_sms_alerts):
+    # SMS (if enabled)
+    if getattr(config, "send_sms_alerts", False):
         text_db_row(alert)
+    # Discord (if enabled)
+    if getattr(config, "send_discord_alerts", False):
+        send_discord_alert(alert)
 
 
 def sleep_random(lval, rval):
