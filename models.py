@@ -22,7 +22,8 @@ class Config:
     db_user: str
     db_password: str
     filters: list[str]
-    combine_texts: bool
+    discord_webhook_url: str
+    send_discord_alerts: bool
 
 # format is postgresql://username:password@host:port/database
 
@@ -45,13 +46,12 @@ def get_db(table_name: str):
         link: Mapped[str] = mapped_column(String)
         title: Mapped[str] = mapped_column(String)
         cl_id: Mapped[str] = mapped_column(String)
-        screenshot_path: Mapped[Optional[str]] = mapped_column(String)
         time_posted: Mapped[str] = mapped_column(String)
         location: Mapped[str] = mapped_column(String)
         time_scraped: Mapped[str] = mapped_column(String)
 
 
         def __repr__(self):
-            return f'link: {self.link}\ntitle: {self.title}\nid: {self.cl_id}\nscreenshot_path: {self.screenshot_path}\ntime_posted: {self.time_posted}\nlocation: {self.location}\ntime_scraped: {self.time_scraped}'
+            return f'link: {self.link}\ntitle: {self.title}\nid: {self.cl_id}\ntime_posted: {self.time_posted}\nlocation: {self.location}\ntime_scraped: {self.time_scraped}'
 
     return db_listing_entry

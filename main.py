@@ -12,6 +12,9 @@ from email.message import EmailMessage
 import smtplib
 import ssl
 
+# discord imports
+import requests
+
 # misc imports
 import random
 import os
@@ -46,7 +49,7 @@ except Exception as exc:
         f'check config file - something is broken.{Exception=} {exc=}. Exiting...')
     exit()
 
-# # setting up database
+# setting up database
 # Base.metadata.create_all(engine)
 name = cl_args.config.split(sep='/')[-1].removesuffix('.json')
 db = get_db(f'{name}')
@@ -89,9 +92,9 @@ def translate_html_elements(timestamp: str, browser):
         link = a_tag.get_attribute('href')
         cl_id = link.split(sep='/')[-1].removesuffix('.html')
         meta_string = el.find_element(by=By.CLASS_NAME, value='meta').text
-        posted_time, location = meta_string.split(sep='·')
+        posted_time, location = meta_string.split(sep='\n')
 
-        result = db(link=link, title=title, cl_id=cl_id, screenshot_path='',
+        result = db(link=link, title=title, cl_id=cl_id,
                     time_posted=posted_time, location=location, time_scraped=timestamp)
         listings.append(result)
     return listings
@@ -138,6 +141,26 @@ def scrape(url: str, timestamp: str):
 
     return num_listings
 
+def send_discord_alert(alert):
+    if not config.discord_webhook_url:
+        printError("Discord webhook URL not set in config.")
+        return
+    message_body = (
+        f"@here\n"
+        f"**Craigslist Alert**\n"
+        f"**Title:** {alert.title}\n"
+        f"**Scraped:** {alert.time_scraped}\n"
+        f"**Posted:** {alert.time_posted}\n"
+        f"**Location:** {alert.location}\n"
+        f"{alert.link}"
+    )
+    data = {"content": message_body}
+    try:
+        response = requests.post(config.discord_webhook_url, json=data)
+        if response.status_code != 204 and response.status_code != 200:
+            printError(f"Discord webhook failed: {response.status_code} {response.text}")
+    except Exception as exc:
+        printError(f"Exception sending Discord webhook: {exc}")
 
 def send_email_alert(alert):
     msg = EmailMessage()
@@ -177,13 +200,18 @@ def text_db_row(alert):
     message_body = f'title: {alert.title}\nscraped: {alert.time_scraped}\nposted: {alert.time_posted}\nlocation:{alert.location}\n{alert.link}'
     send_sms(message_body)
 
-
+# alert is a db row object
 def send_alert(alert):
-    # email not working
-    # if bool(config.email.send_alerts):
+    # Email (if enabled) 
+    # TODO - fix email alerts
+    # if getattr(config, "send_email_alerts", False):
     #     send_email_alert(alert)
-    if bool(config.send_sms_alerts):
+    # SMS (if enabled)
+    if getattr(config, "send_sms_alerts", False):
         text_db_row(alert)
+    # Discord (if enabled)
+    if getattr(config, "send_discord_alerts", False):
+        send_discord_alert(alert)
 
 
 def sleep_random(lval, rval):
@@ -198,36 +226,32 @@ def sleep_random(lval, rval):
 
 def main():
     welcome_message()
-    db_query_filters = [ db.title.regexp_match(f'\y({word})\y', 'ix')  for word in config.filters]
-    intial_loop = True
+    db_query_filters = [db.title.regexp_match(f'\\b({word})\\b', 'ix') for word in config.filters]
+    initial_loop = True
     while True:
         # get results
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        text_msg = ''
         for i, url in enumerate(config.urls):
 
             # returns the number of new listings
             scrape(url, timestamp)
-            if intial_loop:
+            if initial_loop:
                 continue
 
+            # query the database for new listings and send alerts
             with Session(engine) as session:
                 qry = select(db).where(db.time_scraped == timestamp, ~or_(*db_query_filters))
-                for i, listing in enumerate(session.scalars(qry)):
+                listings = list(session.scalars(qry))
+                for i, listing in enumerate(listings):
                     printInfo(f'{i}. {listing.title} : {listing.link}')
-                    if config.combine_texts:
-                        text_msg += f'{listing.title} : {listing.link}\n\n'
-                    else: send_alert(listing)
+                    send_alert(listing)
 
-            if text_msg and config.combine_texts:
-                send_sms(text_msg)
-
-            # sleep before we get the next url result
+            # sleep between 5 and 15 seconds between config urls
             if i != len(config.urls) - 1:
                 sleep_random(5, 15)
 
-        intial_loop = False
-        # sleep between 45 and 90 seconds
+        initial_loop = False
+        # sleep between 45 and 90 seconds between major cycles
         sleep_random(45, 90)
 
 
